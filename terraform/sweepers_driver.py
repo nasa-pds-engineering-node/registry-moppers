@@ -33,7 +33,7 @@
 # Python driver for provenance
 # ============================
 #
-# This script is provided to support the scheduled execution of PDS Registry 
+# This script is provided to support the scheduled execution of PDS Registry
 # Provenance, typically in AWS via Event Bridge and ECS/Fargate.
 #
 # This script makes the following assumptions for its run-time:
@@ -42,14 +42,14 @@
 #   variable PROV_ENDPOINT
 # - The username/password is provided as a JSON key/value in the environment
 #   variable PROV_CREDENTIALS
-# - The remotes available through cross cluster search to be processed are 
+# - The remotes available through cross cluster search to be processed are
 #   provided as a JSON list of strings - each string containing the space
 #   separated list of remotes (as they appear on the provenance command line)
 #   Each set of remotes is used in an execution of provenance. The value of
-#   this is specified in the environment variable PROV_REMOTES. If this 
-#   variable is empty or not defined, provenance is run without specifying 
+#   this is specified in the environment variable PROV_REMOTES. If this
+#   variable is empty or not defined, provenance is run without specifying
 #   remotes and only the PROV_ENDPOINT is processed.
-# - The directory containing the provenance.py file is in PATH and is 
+# - The directory containing the provenance.py file is in PATH and is
 #   executable.
 #
 #

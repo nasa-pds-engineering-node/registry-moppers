@@ -23,3 +23,11 @@
 /.pre-commit-config.yaml
 
 /tests/
+
+/.mypy_cache/
+
+/.tox/
+
+/build/
+
+/.coverage

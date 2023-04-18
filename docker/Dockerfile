@@ -49,9 +49,10 @@ ENV INSTALL_WORKDIR=/tmp/registry-sweepers
 COPY ./requirements.txt $INSTALL_WORKDIR/requirements.txt
 RUN pip install -r $INSTALL_WORKDIR/requirements.txt
 
+#TODO: install the actual package instead of copying random files about
 COPY . $INSTALL_WORKDIR
 WORKDIR $INSTALL_WORKDIR
-RUN cp ./src/pds/provenance/provenance.py /usr/local/bin \
+RUN cp ./src/pds/registrysweepers/provenance.py /usr/local/bin \
  && cp ./terraform/sweepers_driver.py /usr/local/bin \
  && rm -r /tmp/registry-sweepers
 

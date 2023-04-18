@@ -27,7 +27,7 @@ resource "aws_ssm_parameter" "prov_endpoint_parameter" {
 #
 # Remotes are organized into sets that are processed in one
 # execution of the provenance script.
-# 
+#
 resource "aws_ssm_parameter" "prov_remotes_parameter" {
   name = "/pds/${var.node_name_abbr}/${var.venue}/provenance/remote_lists"
   type = "String"
