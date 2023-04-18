@@ -43,16 +43,16 @@ import argparse
 import collections
 import json
 import logging
+import urllib.parse
+from typing import Dict
 from typing import Iterable
 from typing import List
 from typing import Mapping
 from typing import Union
 
-log = logging.getLogger("registrysweepers")
 import requests
-import urllib.parse
 
-requests.packages.urllib3.disable_warnings()
+log = logging.getLogger("registrysweepers")
 
 HOST = collections.namedtuple("HOST", ["nodes", "password", "url", "username", "verify"])
 
@@ -75,7 +75,7 @@ def _vid_as_tuple_of_int(lidvid: str):
 
 def configure_logging(filepath: Union[str, None], log_level: int):
     logging.root.handlers = []
-    handlers = [logging.StreamHandler()]
+    handlers: List[logging.StreamHandler] = [logging.StreamHandler()]
 
     if filepath:
         handlers.append(logging.FileHandler(filepath))
@@ -117,7 +117,7 @@ def get_successors_by_lidvid(extant_lidvids: Iterable[str]) -> Mapping[str, str]
     unique_lids = {lidvid.split("::")[0] for lidvid in extant_lidvids}
 
     log.info("   ...binning LIDVIDs by LID...")
-    lidvid_aggregates_by_lid = {lid: [] for lid in unique_lids}
+    lidvid_aggregates_by_lid: Dict[str, List[str]] = {lid: [] for lid in unique_lids}
     for lidvid in extant_lidvids:
         lid = lidvid.split("::")[0]
         lidvid_aggregates_by_lid[lid].append(lidvid)
@@ -174,7 +174,7 @@ def get_extant_lidvids(host: HOST) -> Iterable[str]:
         log.info(f"   ...{len(extant_lidvids)} of {hits} retrieved ({percent_hit}%)...")
 
     if "scroll_id" in query:
-        path = "_search/scroll/" + query["scroll_id"]
+        path = f'_search/scroll/{query["scroll_id"]}'
         requests.delete(urllib.parse.urljoin(host.url, path), auth=(host.username, host.password), verify=host.verify)
 
     log.info("Finished retrieving LIDVIDs with current direct successors!")
@@ -210,9 +210,9 @@ def write_updated_docs(host: HOST, lidvids_and_successors: Mapping[str, str]):
     )
     response.raise_for_status()
 
-    response = response.json()
-    if response["errors"]:
-        for item in response["items"]:
+    response_content = response.json()
+    if response_content.get("errors"):
+        for item in response_content["items"]:
             if "error" in item:
                 log.error("update error (%d): %s", item["status"], str(item["error"]))
     else:
