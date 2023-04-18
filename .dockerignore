@@ -1,8 +1,12 @@
-/.gitattributes
+.*
 
 /venv/
 
-/.gitignore
+/docs/
+
+/build/
+
+/tests/
 
 /LICENSE.md
 
@@ -14,20 +18,4 @@
 
 /tox.ini
 
-/docs/
-
-/.github/
-
 /NOTICE.txt
-
-/.pre-commit-config.yaml
-
-/tests/
-
-/.mypy_cache/
-
-/.tox/
-
-/build/
-
-/.coverage
