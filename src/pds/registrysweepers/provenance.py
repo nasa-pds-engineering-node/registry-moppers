@@ -69,8 +69,8 @@ def parse_log_level(input: str) -> int:
 
 
 def _vid_as_tuple_of_int(lidvid: str):
-    M, m = lidvid.split("::")[1].split(".")
-    return (int(M), int(m))
+    major_version, minor_version = lidvid.split("::")[1].split(".")
+    return (int(major_version), int(minor_version))
 
 
 def configure_logging(filepath: Union[str, None], log_level: int):
