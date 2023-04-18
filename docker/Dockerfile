@@ -43,11 +43,15 @@
 FROM python:3.10-slim-bullseye
 
 ARG GIT_BRANCH=main
+ENV INSTALL_WORKDIR=/tmp/registry-sweepers
 
-COPY . /tmp/registry-sweepers
-WORKDIR /tmp/registry-sweepers
-RUN pip install -r requirements.txt \
- && cp ./src/pds/provenance/provenance.py /usr/local/bin \
+# Copy dependencies separately so installation is cached
+COPY ./requirements.txt $INSTALL_WORKDIR/requirements.txt
+RUN pip install -r $INSTALL_WORKDIR/requirements.txt
+
+COPY . $INSTALL_WORKDIR
+WORKDIR $INSTALL_WORKDIR
+RUN cp ./src/pds/provenance/provenance.py /usr/local/bin \
  && cp ./terraform/sweepers_driver.py /usr/local/bin \
  && rm -r /tmp/registry-sweepers
 
