@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """My PDS Module."""
+import pds.registrysweepers.provenance
 import pkg_resources
 
 
