@@ -1,5 +1,5 @@
 #! /usr/bin/env python3
-
+#
 # Copyright © 2023, California Institute of Technology ("Caltech").
 # U.S. Government sponsorship acknowledged.
 #
@@ -54,37 +54,38 @@
 #
 #
 
-import os
+import functools
 import json
+import logging
+import os
+
+from pds.registrysweepers import provenance
 
 opensearch_endpoint = os.environ.get("PROV_ENDPOINT")
 
 username = None
-passwd = None
+password = None
 provCredentialsStr = os.environ.get("PROV_CREDENTIALS")
 if provCredentialsStr is not None and provCredentialsStr.strip() != '':
     provCredentials = json.loads(provCredentialsStr)
     username = list(provCredentials.keys())[0]
-    passwd = provCredentials[username]
+    password = provCredentials[username]
 
-remotesLists = None
-remotesStr = os.environ.get("PROV_REMOTES")
-if remotesStr is not None and remotesStr.strip() != '':
-    remotesLists = json.loads(remotesStr)
 
-command = f'provenance.py -b {opensearch_endpoint} -l provenance.log -L DEBUG'
-if username is not None:
-    command += f' -u {username} -p {passwd}'
+run_provenance = functools.partial(
+    provenance.run,
+    base_url=opensearch_endpoint,
+    username=username,
+    password=password,
+    log_filepath='provenance.log',
+    log_level=logging.DEBUG  # TODO: pull this from LOGLEVEL env var
+)
 
-result = 0
-if remotesLists is None:
-    result = os.system(command)
+cross_cluster_remote_batches = os.environ.get("PROV_REMOTES") or None
+if cross_cluster_remote_batches is None:
+    run_provenance()
 else:
-    for remoteList in remotesLists:
-        result = os.system(command + f' -c {remoteList}')
-        if result != 0: break
-
-if result != 0:
-     print(f'Execution failure')
-else:
-     print('Execution completed successfully.')
+    remote_nodesets = json.loads(cross_cluster_remote_batches)
+    for remote_nodeset in remote_nodesets:
+        cross_cluster_remotes = remote_nodeset.split()
+        run_provenance(cross_cluster_remotes=cross_cluster_remotes)

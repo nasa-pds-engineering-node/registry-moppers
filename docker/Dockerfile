@@ -45,15 +45,9 @@ FROM python:3.10-slim-bullseye
 ARG GIT_BRANCH=main
 ENV INSTALL_WORKDIR=/tmp/registry-sweepers
 
-# Copy dependencies separately so installation is cached
-COPY ./requirements.txt $INSTALL_WORKDIR/requirements.txt
-RUN pip install -r $INSTALL_WORKDIR/requirements.txt
-
-#TODO: install the actual package instead of copying random files about
 COPY . $INSTALL_WORKDIR
-WORKDIR $INSTALL_WORKDIR
-RUN cp ./src/pds/registrysweepers/provenance.py /usr/local/bin \
- && cp ./terraform/sweepers_driver.py /usr/local/bin \
- && rm -r /tmp/registry-sweepers
+RUN pip install $INSTALL_WORKDIR \
+ && cp $INSTALL_WORKDIR/docker/sweepers_driver.py /usr/local/bin/ \
+ && rm -r $INSTALL_WORKDIR
 
 CMD ["/usr/local/bin/sweepers_driver.py"]

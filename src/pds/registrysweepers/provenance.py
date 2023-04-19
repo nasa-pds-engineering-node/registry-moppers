@@ -54,7 +54,7 @@ import requests
 
 log = logging.getLogger("registrysweepers")
 
-HOST = collections.namedtuple("HOST", ["nodes", "password", "url", "username", "verify"])
+HOST = collections.namedtuple("HOST", ["cross_cluster_remotes", "password", "url", "username", "verify"])
 
 METADATA_SUCCESSOR_KEY = "ops:Provenance/ops:superseded_by"
 
@@ -84,10 +84,10 @@ def configure_logging(filepath: Union[str, None], log_level: int):
 
 
 def run(
-    cluster_nodes: List[str],  # TODO: confirm type
     base_url: str,
     username: str,
     password: str,
+    cross_cluster_remotes=None,
     verify_host_certs: bool = False,
     log_filepath: Union[str, None] = None,
     log_level: int = logging.INFO,
@@ -96,7 +96,7 @@ def run(
 
     log.info("starting CLI processing")
 
-    host = HOST(cluster_nodes, password, base_url, username, verify_host_certs)
+    host = HOST(cross_cluster_remotes or [], password, base_url, username, verify_host_certs)
 
     extant_lidvids = get_extant_lidvids(host)
     updates = get_successors_by_lidvid(extant_lidvids)
@@ -147,8 +147,8 @@ def get_extant_lidvids(host: HOST) -> Iterable[str]:
 
     log.info("Retrieving extant LIDVIDs")
 
-    clusters = [node + ":registry" for node in host.nodes]
-    path = ",".join(["registry"] + clusters) + "/_search?scroll=10m"
+    cross_cluster_indexes = [node + ":registry" for node in host.cross_cluster_remotes]
+    path = ",".join(["registry"] + cross_cluster_indexes) + "/_search?scroll=10m"
     extant_lidvids = []
     query = {
         "query": {"bool": {"must": [{"terms": {"ops:Tracking_Meta/ops:archive_status": ["archived", "certified"]}}]}},
@@ -190,9 +190,9 @@ def write_updated_docs(host: HOST, lidvids_and_successors: Mapping[str, str]):
     log.info("Bulk update %d documents", len(lidvids_and_successors))
 
     bulk_updates = []
-    cluster = [node + ":registry" for node in host.nodes]
+    ccs_indexes = [node + ":registry" for node in host.cross_cluster_remotes]
     headers = {"Content-Type": "application/x-ndjson"}
-    path = ",".join(["registry"] + cluster) + "/_bulk"
+    path = ",".join(["registry"] + ccs_indexes) + "/_bulk"
 
     for lidvid, direct_successor in lidvids_and_successors.items():
         bulk_updates.append(json.dumps({"update": {"_id": lidvid}}))
@@ -245,10 +245,10 @@ if __name__ == "__main__":
     ap.add_argument("-b", "--base-URL", required=True, type=str)
     ap.add_argument(
         "-c",
-        "--cluster-nodes",
+        "--ccs-remotes",
         default=[],
         nargs="*",
-        help="names of opensearch cluster nodes that will be parsed by opensearch",
+        help="names of additional opensearch cross-cluster remotes, space-separated",
     )
     ap.add_argument("-l", "--log-file", default=None, required=False, help="file to write the log messages")
     ap.add_argument(
@@ -277,10 +277,10 @@ if __name__ == "__main__":
     args = ap.parse_args()
 
     run(
-        cluster_nodes=args.cluster_nodes,
         base_url=args.base_URL,
         username=args.username,
         password=args.password,
+        cross_cluster_remotes=args.cluster_nodes,
         verify_host_certs=args.verify,
         log_level=args.log_level,
         log_filepath=args.log_file,
