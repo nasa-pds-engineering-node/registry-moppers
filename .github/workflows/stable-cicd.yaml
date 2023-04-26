@@ -73,6 +73,31 @@ jobs:
                     pypi_username: ${{secrets.PYPI_USERNAME}}
                     pypi_password: ${{secrets.PYPI_PASSWORD}}
                     ADMIN_GITHUB_TOKEN: ${{secrets.ADMIN_GITHUB_TOKEN}}
+            -
+                name: 🫙 Docker Image Tag Determination
+                id: docker_tag_determination
+                run: echo "::set-output name=image_tag::$(cat ./src/pds/registrysweepers/VERSION.txt)"
+            -
+                name: 💳 Docker Hub Identification
+                uses: docker/login-action@v2
+                with:
+                    username: ${{secrets.DOCKERHUB_USERNAME}}
+                    password: ${{secrets.DOCKERHUB_TOKEN}}
+            -
+                name: 🎰 QEMU Multiple Machine Emulation
+                uses: docker/setup-qemu-action@v2
+            -
+                name: 🚢 Docker Buildx
+                uses: docker/setup-buildx-action@v2
+            -
+                name: 🧱 Image Construction and Publication
+                uses: docker/build-push-action@v3
+                with:
+                  context: ./
+                  file: ./docker/Dockerfile
+                  platforms: linux/amd64,linux/arm64
+                  push: true
+                  tags: ${{secrets.DOCKERHUB_USERNAME}}/registry-sweepers:${{steps.docker_tag_determination.outputs.image_tag}}
 
 ...
 
