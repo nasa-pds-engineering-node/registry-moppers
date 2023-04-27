@@ -1,11 +1,12 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2023-04-19)
+## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2023-04-27)
 
 [Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/3fabe85a65d26f2509c830d02c2b5f09a2793cf7...«unknown»)
 
 **Other closed issues:**
 
+- Create the docker image and push it to docker hub as part of the CICD [\#6](https://github.com/NASA-PDS/registry-sweepers/issues/6)
 - Update non-essential Dockerfile elements for new repository structure  [\#2](https://github.com/NASA-PDS/registry-sweepers/issues/2)
 - Migrate registry-api/provenance script into this repository [\#1](https://github.com/NASA-PDS/registry-sweepers/issues/1)
 
