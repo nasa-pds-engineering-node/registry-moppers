@@ -108,7 +108,7 @@ def query_registry_db(
 
     cross_cluster_indexes = [node + ":registry" for node in host.cross_cluster_remotes]
     path = ",".join(["registry"] + cross_cluster_indexes) + f"/_search?scroll={scroll_validity_duration_minutes}m"
-    returned_hits = []
+    served_hits = 0
 
     more_data_exists = True
     while more_data_exists:
@@ -125,18 +125,16 @@ def query_registry_db(
         req_content = {"scroll": f"{scroll_validity_duration_minutes}m", "scroll_id": data["_scroll_id"]}
 
         total_hits = data["hits"]["total"]["value"]
-        log.info(
-            f"   paging query ({len(returned_hits)} to {min(len(returned_hits) + page_size, total_hits)} of {total_hits})"
-        )
-        returned_hits.extend(data["hits"]["hits"])
+        log.info(f"   paging query ({served_hits} to {min(served_hits + page_size, total_hits)} of {total_hits})")
+        for hit in data["hits"]["hits"]:
+            yield hit
+            served_hits += 1
 
-        more_data_exists = len(returned_hits) < data["hits"]["total"]["value"]
+        more_data_exists = served_hits < data["hits"]["total"]["value"]
 
     if "scroll_id" in req_content:
         path = f'_search/scroll/{req_content["scroll_id"]}'
         requests.delete(urllib.parse.urljoin(host.url, path), auth=(host.username, host.password), verify=host.verify)
-
-    return returned_hits
 
 
 def get_extant_lidvids(host: HOST) -> Iterable[str]:
