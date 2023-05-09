@@ -88,6 +88,57 @@ def configure_logging(filepath: Union[str, None], log_level: int):
     logging.basicConfig(level=log_level, format="%(asctime)s::%(levelname)s::%(message)s", handlers=handlers)
 
 
+def query_registry_db(
+    host: HOST, query: Dict, _source: Dict, page_size: int = 10000, scroll_validity_duration_minutes: int = 10
+) -> Iterable[Dict]:
+    """
+    Given an OpenSearch host and query/_source, return an iterable collection of hits
+
+    Example query: {"bool": {"must": [{"terms": {"ops:Tracking_Meta/ops:archive_status": ["archived", "certified"]}}]}}
+    Example _source: {"includes": ["lidvid"]}
+    """
+
+    req_content = {
+        "query": query,
+        "_source": _source,
+        "size": page_size,
+    }
+
+    log.debug(f"Initiating query: {req_content}")
+
+    cross_cluster_indexes = [node + ":registry" for node in host.cross_cluster_remotes]
+    path = ",".join(["registry"] + cross_cluster_indexes) + f"/_search?scroll={scroll_validity_duration_minutes}m"
+    returned_hits = []
+
+    more_data_exists = True
+    while more_data_exists:
+        resp = requests.get(
+            urllib.parse.urljoin(host.url, path),
+            auth=(host.username, host.password),
+            verify=host.verify,
+            json=req_content,
+        )
+        resp.raise_for_status()
+
+        data = resp.json()
+        path = "_search/scroll"
+        req_content = {"scroll": f"{scroll_validity_duration_minutes}m", "scroll_id": data["_scroll_id"]}
+
+        total_hits = data["hits"]["total"]["value"]
+        log.info(
+            f"   paging query ({len(returned_hits)} to {min(len(returned_hits) + page_size, total_hits)} of {total_hits})"
+        )
+        returned_hits.extend(data["hits"]["hits"])
+
+        more_data_exists = len(returned_hits) < data["hits"]["total"]["value"]
+
+    if "scroll_id" in req_content:
+        path = f'_search/scroll/{req_content["scroll_id"]}'
+        requests.delete(urllib.parse.urljoin(host.url, path), auth=(host.username, host.password), verify=host.verify)
+
+    return returned_hits
+
+
 def get_extant_lidvids(host: HOST) -> Iterable[str]:
     """
     Given an OpenSearch host, return all extant LIDVIDs
@@ -95,39 +146,12 @@ def get_extant_lidvids(host: HOST) -> Iterable[str]:
 
     log.info("Retrieving extant LIDVIDs")
 
-    cross_cluster_indexes = [node + ":registry" for node in host.cross_cluster_remotes]
-    path = ",".join(["registry"] + cross_cluster_indexes) + "/_search?scroll=10m"
-    extant_lidvids = []
-    query = {
-        "query": {"bool": {"must": [{"terms": {"ops:Tracking_Meta/ops:archive_status": ["archived", "certified"]}}]}},
-        "_source": {"includes": ["lidvid"]},
-        "size": 10000,
-    }
+    query = {"bool": {"must": [{"terms": {"ops:Tracking_Meta/ops:archive_status": ["archived", "certified"]}}]}}
+    _source = {"includes": ["lidvid"]}
 
-    more_data_exists = True
-    while more_data_exists:
-        resp = requests.get(
-            urllib.parse.urljoin(host.url, path), auth=(host.username, host.password), verify=host.verify, json=query
-        )
-        resp.raise_for_status()
+    results = query_registry_db(host, query, _source, scroll_validity_duration_minutes=1)
 
-        data = resp.json()
-        path = "_search/scroll"
-        query = {"scroll": "10m", "scroll_id": data["_scroll_id"]}
-        extant_lidvids.extend([hit["_source"]["lidvid"] for hit in data["hits"]["hits"]])
-        more_data_exists = len(extant_lidvids) < data["hits"]["total"]["value"]
-
-        hits = data["hits"]["total"]["value"]
-        percent_hit = int(round(len(extant_lidvids) / hits * 100))
-        log.info(f"   ...{len(extant_lidvids)} of {hits} retrieved ({percent_hit}%)...")
-
-    if "scroll_id" in query:
-        path = f'_search/scroll/{query["scroll_id"]}'
-        requests.delete(urllib.parse.urljoin(host.url, path), auth=(host.username, host.password), verify=host.verify)
-
-    log.info("Finished retrieving LIDVIDs with current direct successors!")
-
-    return extant_lidvids
+    return map(lambda doc: doc["_source"]["lidvid"], results)
 
 
 def write_updated_docs(host: HOST, ids_and_updates: Mapping[str, Dict]):
