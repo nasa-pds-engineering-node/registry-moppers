@@ -114,6 +114,8 @@ def get_successors_by_lidvid(extant_lidvids: Iterable[str]) -> Mapping[str, str]
 
     log.info("Generating updated history...")
 
+    extant_lidvids = list(extant_lidvids)  # ensure against consumable iterator
+
     unique_lids = {lidvid.split("::")[0] for lidvid in extant_lidvids}
 
     log.info("   ...binning LIDVIDs by LID...")
