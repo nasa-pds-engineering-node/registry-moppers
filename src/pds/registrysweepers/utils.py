@@ -89,7 +89,12 @@ def configure_logging(filepath: Union[str, None], log_level: int):
 
 
 def query_registry_db(
-    host: HOST, query: Dict, _source: Dict, page_size: int = 10000, scroll_validity_duration_minutes: int = 10
+    host: HOST,
+    query: Dict,
+    _source: Dict,
+    index_name: str = "registry",
+    page_size: int = 10000,
+    scroll_validity_duration_minutes: int = 10,
 ) -> Iterable[Dict]:
     """
     Given an OpenSearch host and query/_source, return an iterable collection of hits
@@ -106,8 +111,8 @@ def query_registry_db(
 
     log.debug(f"Initiating query: {req_content}")
 
-    cross_cluster_indexes = [node + ":registry" for node in host.cross_cluster_remotes]
-    path = ",".join(["registry"] + cross_cluster_indexes) + f"/_search?scroll={scroll_validity_duration_minutes}m"
+    cross_cluster_indexes = [f"{node}:{index_name}" for node in host.cross_cluster_remotes]
+    path = ",".join([index_name] + cross_cluster_indexes) + f"/_search?scroll={scroll_validity_duration_minutes}m"
     served_hits = 0
 
     more_data_exists = True
@@ -152,16 +157,16 @@ def get_extant_lidvids(host: HOST) -> Iterable[str]:
     return map(lambda doc: doc["_source"]["lidvid"], results)
 
 
-def write_updated_docs(host: HOST, ids_and_updates: Mapping[str, Dict]):
+def write_updated_docs(host: HOST, ids_and_updates: Mapping[str, Dict], index_name: str = "registry"):
     """
     Given an OpenSearch host and a mapping of doc ids onto updates to those docs, write bulk updates to documents in db.
     """
     log.info("Bulk update %d documents", len(ids_and_updates))
 
     bulk_updates = []
-    ccs_indexes = [node + ":registry" for node in host.cross_cluster_remotes]
+    cross_cluster_indexes = [f"{node}:{index_name}" for node in host.cross_cluster_remotes]
     headers = {"Content-Type": "application/x-ndjson"}
-    path = ",".join(["registry"] + ccs_indexes) + "/_bulk"
+    path = ",".join([index_name] + cross_cluster_indexes) + "/_bulk"
 
     for lidvid, update_content in ids_and_updates.items():
         bulk_updates.append(json.dumps({"update": {"_id": lidvid}}))
