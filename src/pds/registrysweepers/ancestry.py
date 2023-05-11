@@ -5,16 +5,19 @@ from enum import auto
 from enum import Enum
 from itertools import chain
 from typing import Any
+from typing import Callable
 from typing import Dict
 from typing import Iterable
 from typing import List
+from typing import Optional
 from typing import Set
+from typing import Tuple
 from typing import Union
 
 from pds.registrysweepers.utils import configure_logging
 from pds.registrysweepers.utils import HOST
 from pds.registrysweepers.utils import parse_args
-from pds.registrysweepers.utils import query_registry_db
+from pds.registrysweepers.utils import query_registry_db_or_mock
 from pds.registrysweepers.utils import write_updated_docs
 from pds.registrysweepers.utils.productidentifiers.factory import PdsProductIdentifierFactory
 from pds.registrysweepers.utils.productidentifiers.pdslid import PdsLid
@@ -57,27 +60,33 @@ def product_class_query_factory(cls: ProductClass) -> Dict:
     return queries[cls]
 
 
-def get_bundle_ancestry_records(host: HOST) -> Iterable[AncestryRecord]:
+def get_bundle_ancestry_records(
+    host: HOST, registry_db_mock: Optional[Callable[[str], Iterable[Dict]]] = None
+) -> Iterable[AncestryRecord]:
     query = product_class_query_factory(ProductClass.BUNDLE)
     _source = {"includes": ["lidvid"]}
+    query_f = query_registry_db_or_mock(registry_db_mock, "get_bundle_ancestry_records")
+    docs = query_f(host, query, _source)  # type: ignore
 
-    results = query_registry_db(host, query, _source)
-
-    return [AncestryRecord(lidvid=PdsLidVid.from_string(doc["_source"]["lidvid"])) for doc in results]
+    return [AncestryRecord(lidvid=PdsLidVid.from_string(doc["_source"]["lidvid"])) for doc in docs]
 
 
-def get_collection_ancestry_records(host: HOST) -> Iterable[AncestryRecord]:
+def get_collection_ancestry_records(
+    host: HOST, registry_db_mock: Optional[Callable[[str], Iterable[Dict]]] = None
+) -> Iterable[AncestryRecord]:
     # Query the registry for all bundles and the collections each references.
-    top_down_ref_search_query = product_class_query_factory(ProductClass.BUNDLE)
-    top_down_ref_search_source = {"includes": ["lidvid", "ref_lid_collection"]}
-    top_down_ref_search_docs = query_registry_db(host, top_down_ref_search_query, top_down_ref_search_source)
+    bundles_query = product_class_query_factory(ProductClass.BUNDLE)
+    bundles_source = {"includes": ["lidvid", "ref_lid_collection"]}
+    bundles_query_f = query_registry_db_or_mock(registry_db_mock, "get_collection_ancestry_records_bundles")
+    bundles_docs = bundles_query_f(host, bundles_query, bundles_source)  # type: ignore
 
     # Query the registry for all collection identifiers
-    collection_identifiers_query = product_class_query_factory(ProductClass.COLLECTION)
-    collection_identifiers_source = {"includes": ["lidvid"]}
+    collections_query = product_class_query_factory(ProductClass.COLLECTION)
+    collections_source = {"includes": ["lidvid"]}
     # TODO: switch to this line to support alternate_ids
     # collection_identifiers_source = {"includes": ["alternate_ids"]}  # alternate_ids includes lid, lidvid, and any aliases
-    collection_identifiers_docs = query_registry_db(host, collection_identifiers_query, collection_identifiers_source)
+    collections_query_f = query_registry_db_or_mock(registry_db_mock, "get_collection_ancestry_records_collections")
+    collection_identifiers_docs = collections_query_f(host, collections_query, collections_source)  # type: ignore
 
     # TODO: change to for loop to support alternate_ids (generate multiple keys per element and filter out LIDs)
     #  also necessary to populate a multidirectional lookup for LIDs with aliases which can be used during LID-based
@@ -99,7 +108,7 @@ def get_collection_ancestry_records(host: HOST) -> Iterable[AncestryRecord]:
         ancestry_by_collection_lid[record.lidvid.lid].add(record)
 
     # For each bundle, add it to the bundle-ancestry of every collection it references
-    for doc in top_down_ref_search_docs:
+    for doc in bundles_docs:
         bundle_lidvid = PdsLidVid.from_string(doc["_source"]["lidvid"])
         referenced_collection_identifiers = [
             PdsProductIdentifierFactory.from_string(id) for id in doc["_source"]["ref_lid_collection"]
@@ -131,23 +140,28 @@ def get_collection_ancestry_records(host: HOST) -> Iterable[AncestryRecord]:
     return ancestry_by_collection_lidvid.values()
 
 
-def get_nonaggregate_ancestry_records(host: HOST, collection_ancestry_records: Iterable[AncestryRecord]):
+def get_nonaggregate_ancestry_records(
+    host: HOST,
+    collection_ancestry_records: Iterable[AncestryRecord],
+    registry_db_mock: Optional[Callable[[str], Iterable[Dict]]] = None,
+) -> Iterable[AncestryRecord]:
     # Generate lookup for the parent bundles of all collections - these will be applied to non-aggregate products too.
     bundle_ancestry_by_collection_lidvid = {
         record.lidvid: record.parent_bundle_lidvids for record in collection_ancestry_records
     }
 
     # Query the registry-refs index for the contents of all collections
-    top_down_ref_search_query = {"match_all": {}}  # type: ignore
-    top_down_ref_search_source = {"includes": ["collection_lidvid", "product_lidvid"]}
-    top_down_ref_search_docs = query_registry_db(
-        host, top_down_ref_search_query, top_down_ref_search_source, index_name="registry-refs"
-    )
+    collection_refs_query = {"match_all": {}}  # type: ignore
+    collection_refs_source = {"includes": ["collection_lidvid", "product_lidvid"]}
+    collection_refs_query_f = query_registry_db_or_mock(registry_db_mock, "get_nonaggregate_ancestry_records")
+    collection_refs_query_docs = collection_refs_query_f(
+        host, collection_refs_query, collection_refs_source, index_name="registry-refs"
+    )  # type: ignore
 
     nonaggregate_ancestry_records_by_lidvid = {}
 
     # For each collection, add the collection and its bundle ancestry to all products the collection contains
-    for doc in top_down_ref_search_docs:
+    for doc in collection_refs_query_docs:
         collection_lidvid = PdsLidVid.from_string(doc["_source"]["collection_lidvid"])
         bundle_ancestry = bundle_ancestry_by_collection_lidvid[collection_lidvid]
 
@@ -171,23 +185,30 @@ def run(
     verify_host_certs: bool = False,
     log_filepath: Union[str, None] = None,
     log_level: int = logging.INFO,
+    registry_mock_query_f: Optional[Callable[[str], Iterable[Dict]]] = None,
+    ancestry_records_accumulator: Optional[List[AncestryRecord]] = None,
+    bulk_updates_sink: Optional[List[Tuple[str, Dict[str, List]]]] = None,
 ):
+    # TODO: Add informational logging to stages
     configure_logging(filepath=log_filepath, log_level=log_level)
 
     log.info("starting ancestry sweeper processing")
 
     host = HOST(cross_cluster_remotes or [], password, base_url, username, verify_host_certs)
 
-    bundle_records = get_bundle_ancestry_records(host)
-    collection_records = list(
-        get_collection_ancestry_records(host)
-    )  # list cast avoids consumption of the iterable as it is used later
-    nonaggregate_records = get_nonaggregate_ancestry_records(host, collection_records)
+    bundle_records = get_bundle_ancestry_records(host, registry_mock_query_f)
+    # list cast avoids consumption of the iterable as it is used later
+    collection_records = list(get_collection_ancestry_records(host, registry_mock_query_f))
+    nonaggregate_records = get_nonaggregate_ancestry_records(host, collection_records, registry_mock_query_f)
 
     ancestry_records = chain(bundle_records, collection_records, nonaggregate_records)
 
     updates: Dict[str, Dict[str, Any]] = {}
     for record in ancestry_records:
+        # Tee the stream of records into the accumulator, if one was provided (functional testing).
+        if ancestry_records_accumulator is not None:
+            ancestry_records_accumulator.append(record)
+
         if record.lidvid.is_collection() and len(record.parent_bundle_lidvids) == 0:
             log.warning(f"Collection {record.lidvid} is not referenced by any bundle.")
 
@@ -196,6 +217,11 @@ def run(
             METADATA_PARENT_BUNDLE_KEY: [str(id) for id in record.parent_bundle_lidvids],
             METADATA_PARENT_COLLECTION_KEY: [str(id) for id in record.parent_collection_lidvids],
         }
+
+        # Tee the stream of bulk update KVs into the accumulator, if one was provided (functional testing).
+        if bulk_updates_sink is not None:
+            bulk_updates_sink.append((doc_id, update))
+
         if doc_id in updates:
             existing_update = updates[doc_id]
             log.error(
@@ -205,7 +231,7 @@ def run(
 
         updates[doc_id] = update
 
-    if updates:
+    if updates and bulk_updates_sink is None:
         write_updated_docs(host, updates)
 
     # TODO: Search for and log any orphaned non-agg products - it's reasonably sufficient to just look for any product which lacks the relevant metadata keys.

@@ -1,13 +1,16 @@
 import argparse
 import collections
+import functools
 import json
 import logging
 import urllib.parse
 from argparse import Namespace
+from typing import Callable
 from typing import Dict
 from typing import Iterable
 from typing import List
 from typing import Mapping
+from typing import Optional
 from typing import Union
 
 import requests
@@ -140,6 +143,24 @@ def query_registry_db(
     if "scroll_id" in req_content:
         path = f'_search/scroll/{req_content["scroll_id"]}'
         requests.delete(urllib.parse.urljoin(host.url, path), auth=(host.username, host.password), verify=host.verify)
+
+
+def query_registry_db_or_mock(mock_f: Optional[Callable[[str], Iterable[Dict]]], mock_query_id: str):
+    if mock_f is not None:
+
+        def mock_wrapper(
+            host: HOST,
+            query: Dict,
+            _source: Dict,
+            index_name: str = "registry",
+            page_size: int = 10000,
+            scroll_validity_duration_minutes: int = 10,
+        ) -> Iterable[Dict]:
+            return mock_f(mock_query_id)  # type: ignore
+
+        return mock_wrapper
+    else:
+        return query_registry_db
 
 
 def get_extant_lidvids(host: HOST) -> Iterable[str]:
