@@ -58,8 +58,9 @@ import functools
 import json
 import logging
 import os
+from typing import Callable
 
-from pds.registrysweepers import provenance
+from pds.registrysweepers import provenance, ancestry
 
 opensearch_endpoint = os.environ.get("PROV_ENDPOINT")
 
@@ -72,20 +73,28 @@ if provCredentialsStr is not None and provCredentialsStr.strip() != '':
     password = provCredentials[username]
 
 
-run_provenance = functools.partial(
-    provenance.run,
-    base_url=opensearch_endpoint,
-    username=username,
-    password=password,
-    log_filepath='provenance.log',
-    log_level=logging.DEBUG  # TODO: pull this from LOGLEVEL env var
-)
+def run_factory(sweeper_f: Callable) -> Callable:
+    return functools.partial(
+        sweeper_f,
+        base_url=opensearch_endpoint,
+        username=username,
+        password=password,
+        log_filepath='provenance.log',
+        log_level=logging.INFO  # TODO: pull this from LOGLEVEL env var
+    )
+
+
+run_provenance = run_factory(provenance.run)
+run_ancestry = run_factory(ancestry.run)
 
 cross_cluster_remote_batches = os.environ.get("PROV_REMOTES") or None
 if cross_cluster_remote_batches is None:
     run_provenance()
+    run_ancestry()
 else:
     remote_nodesets = json.loads(cross_cluster_remote_batches)
     for remote_nodeset in remote_nodesets:
         cross_cluster_remotes = remote_nodeset.split()
+
         run_provenance(cross_cluster_remotes=cross_cluster_remotes)
+        run_ancestry(cross_cluster_remotes=cross_cluster_remotes)
