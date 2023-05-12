@@ -1,0 +1,80 @@
+{
+  "get_bundle_ancestry_records": [
+    {
+      "_source": {
+        "lidvid": "a:b:c:bundle::1.0"
+      }
+    }
+  ],
+  "get_collection_ancestry_records_bundles": [
+    {
+      "_source": {
+        "lidvid": "a:b:c:bundle::1.0",
+        "ref_lid_collection": [
+          "a:b:c:bundle:lidrefcollection",
+          "a:b:c:bundle:lidvidrefcollection::1.0"
+        ]
+      }
+    }
+  ],
+  "get_collection_ancestry_records_collections": [
+    {
+      "_source": {
+        "lidvid": "a:b:c:bundle:lidrefcollection::1.0"
+      }
+    },
+    {
+      "_source": {
+        "lidvid": "a:b:c:bundle:lidrefcollection::2.0"
+      }
+    },
+    {
+      "_source": {
+        "lidvid": "a:b:c:bundle:lidvidrefcollection::1.0"
+      }
+    },
+    {
+      "_source": {
+        "lidvid": "a:b:c:bundle:lidvidrefcollection::2.0"
+      }
+    }
+  ],
+  "get_nonaggregate_ancestry_records": [
+    {
+      "_source": {
+        "collection_lidvid": "a:b:c:bundle:lidrefcollection::1.0",
+        "product_lidvid": [
+          "a:b:c:bundle:lidrefcollection:collectionuniqueproduct::1.0",
+          "a:b:c:bundle:lidrefcollection:collectionsharedproduct::1.0"
+        ]
+      }
+    },
+    {
+      "_source": {
+        "collection_lidvid": "a:b:c:bundle:lidrefcollection::2.0",
+        "product_lidvid": [
+          "a:b:c:bundle:lidrefcollection:collectionuniqueproduct::2.0",
+          "a:b:c:bundle:lidrefcollection:collectionsharedproduct::1.0"
+        ]
+      }
+    },
+    {
+      "_source": {
+        "collection_lidvid": "a:b:c:bundle:lidvidrefcollection::1.0",
+        "product_lidvid": [
+          "a:b:c:bundle:lidvidrefcollection:collectionuniqueproduct::1.0",
+          "a:b:c:bundle:lidvidrefcollection:collectionsharedproduct::1.0"
+        ]
+      }
+    },
+    {
+      "_source": {
+        "collection_lidvid": "a:b:c:bundle:lidvidrefcollection::2.0",
+        "product_lidvid": [
+          "a:b:c:bundle:lidvidrefcollection:collectionuniqueproduct::2.0",
+          "a:b:c:bundle:lidvidrefcollection:collectionsharedproduct::1.0"
+        ]
+      }
+    }
+  ]
+}
