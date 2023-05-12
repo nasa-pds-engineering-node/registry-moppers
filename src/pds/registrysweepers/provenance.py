@@ -56,7 +56,7 @@ from pds.registrysweepers.utils import HOST
 from pds.registrysweepers.utils import parse_args
 from pds.registrysweepers.utils import write_updated_docs
 
-log = logging.getLogger("registrysweepers.provenance")
+log = logging.getLogger(__name__)
 
 METADATA_SUCCESSOR_KEY = "ops:Provenance/ops:superseded_by"
 
@@ -121,48 +121,11 @@ def get_successors_by_lidvid(extant_lidvids: Iterable[str]) -> Mapping[str, str]
     return successors_by_lidvid
 
 
-def _write_updated_docs(host: HOST, lidvids_and_successors: Mapping[str, str]):
-    """
-    Given an OpenSearch host and a mapping of LIDVIDs onto their direct successors, write provenance history updates
-    to documents in db.
-    """
-    log.info("Bulk update %d documents", len(lidvids_and_successors))
-
-    bulk_updates = []
-    ccs_indexes = [node + ":registry" for node in host.cross_cluster_remotes]
-    headers = {"Content-Type": "application/x-ndjson"}
-    path = ",".join(["registry"] + ccs_indexes) + "/_bulk"
-
-    for lidvid, direct_successor in lidvids_and_successors.items():
-        bulk_updates.append(json.dumps({"update": {"_id": lidvid}}))
-        bulk_updates.append(json.dumps({"doc": {METADATA_SUCCESSOR_KEY: direct_successor}}))
-
-    bulk_data = "\n".join(bulk_updates) + "\n"
-
-    log.info(f"writing bulk update for {len(bulk_updates)} products...")
-    response = requests.put(
-        urllib.parse.urljoin(host.url, path),
-        auth=(host.username, host.password),
-        data=bulk_data,
-        headers=headers,
-        verify=host.verify,
-    )
-    response.raise_for_status()
-
-    response_content = response.json()
-    if response_content.get("errors"):
-        for item in response_content["items"]:
-            if "error" in item:
-                log.error("update error (%d): %s", item["status"], str(item["error"]))
-    else:
-        log.info("bulk updates were successful")
-
-
 if __name__ == "__main__":
     cli_description = f"""
     Update registry records for non-latest LIDVIDs with up-to-date direct successor metadata ({METADATA_SUCCESSOR_KEY}).
 
-    Retrieves existing published LIDVIDs from the registry, determines history for each LID, and writes updated docs back to OpenSearch
+    Retrieves existing published LIDVIDs from the registry, determines history for each LID, and writes updated docs back to registry db.
     """
 
     cli_epilog = """EXAMPLES:

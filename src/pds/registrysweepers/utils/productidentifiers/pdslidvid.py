@@ -28,7 +28,7 @@ class PdsLidVid(PdsProductIdentifier):
         return str(self.lid) + PdsProductIdentifier.LIDVID_SEPARATOR + str(self.vid)
 
     def __hash__(self):
-        return str(self).__hash__()
+        return hash(str(self))
 
     def __repr__(self):
         return f"PdsLidVid({str(self)})"

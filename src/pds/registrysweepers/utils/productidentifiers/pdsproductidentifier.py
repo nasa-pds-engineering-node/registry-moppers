@@ -5,22 +5,25 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from pds.registrysweepers.utils.productidentifiers.pdslid import PdsLid
 
-from abc import ABC
+from abc import ABC, abstractmethod
 
 
 class PdsProductIdentifier(ABC):
     LIDVID_SEPARATOR = "::"
 
     @property
+    @abstractmethod
     def lid(self) -> PdsLid:
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def __str__(self):
-        raise NotImplementedError
+        pass
 
     @staticmethod
+    @abstractmethod
     def from_string(identifier: str):
-        raise NotImplementedError
+        pass
 
     def is_bundle(self):
         """Return whether this identifier refers to a bundle product"""

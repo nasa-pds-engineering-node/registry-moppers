@@ -17,7 +17,7 @@ import requests
 
 HOST = collections.namedtuple("HOST", ["cross_cluster_remotes", "password", "url", "username", "verify"])
 
-log = logging.getLogger("registrysweepers.utils")
+log = logging.getLogger(__name__)
 
 
 def parse_args(description: str = "", epilog: str = "") -> Namespace:
@@ -52,14 +52,14 @@ def parse_args(description: str = "", epilog: str = "") -> Namespace:
         "--password",
         default=None,
         required=False,
-        help="password to login to opensearch leaving it blank if opensearch does not require login",
+        help="password to login to the registry db, leaving it blank if db does not require login",
     )
     ap.add_argument(
         "-u",
         "--username",
         default=None,
         required=False,
-        help="username to login to opensearch leaving it blank if opensearch does not require login",
+        help="username to login to the registry db, leaving it blank if db does not require login",
     )
     ap.add_argument("-v", "--verify", action="store_true", default=False, help="verify the host certificates")
 

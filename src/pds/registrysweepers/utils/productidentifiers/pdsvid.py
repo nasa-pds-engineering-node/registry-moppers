@@ -29,7 +29,7 @@ class PdsVid:
         return f"{self.major_version}.{self.minor_version}"
 
     def __hash__(self):
-        return str(self).__hash__()
+        return hash(str(self))
 
     def __repr__(self):
         return f"PdsVid({str(self)})"

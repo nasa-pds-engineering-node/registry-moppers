@@ -23,7 +23,7 @@ from pds.registrysweepers.utils.productidentifiers.factory import PdsProductIden
 from pds.registrysweepers.utils.productidentifiers.pdslid import PdsLid
 from pds.registrysweepers.utils.productidentifiers.pdslidvid import PdsLidVid
 
-log = logging.getLogger("registrysweepers.ancestry")
+log = logging.getLogger(__name__)
 
 METADATA_PARENT_BUNDLE_KEY = "ops:Provenance/ops:parent_bundle_identifiers"
 METADATA_PARENT_COLLECTION_KEY = "ops:Provenance/ops:parent_collection_identifiers"
@@ -39,7 +39,7 @@ class AncestryRecord:
         return f"AncestryRecord(lidvid={self.lidvid}, parent_collection_lidvids={[str(x) for x in self.parent_collection_lidvids]}, parent_bundle_lidvids={[str(x) for x in self.parent_bundle_lidvids]})"
 
     def __hash__(self):
-        return self.lidvid.__hash__()
+        return hash(self.lidvid)
 
 
 class ProductClass(Enum):
@@ -115,7 +115,7 @@ def get_collection_ancestry_records(
         ]
 
         for identifier in referenced_collection_identifiers:
-            if identifier.__class__ is PdsLidVid:
+            if isinstance(identifier, PdsLidVid):
                 try:
                     # if a LIDVID is specified, add bundle to that LIDVID's record
                     ancestry_by_collection_lidvid[identifier].parent_bundle_lidvids.append(bundle_lidvid)
@@ -123,7 +123,7 @@ def get_collection_ancestry_records(
                     log.warning(
                         f"Collection {identifier} referenced by bundle {bundle_lidvid} does not exist in registry - skipping"
                     )
-            elif identifier.__class__ is PdsLid:
+            elif isinstance(identifier, PdsLid):
                 try:
                     # else if a LID is specified, add bundle to the record of every LIDVID with that LID
                     for record in ancestry_by_collection_lid[identifier]:
@@ -243,7 +243,7 @@ if __name__ == "__main__":
     cli_description = f"""
     Update registry records for non-latest LIDVIDs with up-to-date direct ancestry metadata ({METADATA_PARENT_BUNDLE_KEY} and {METADATA_PARENT_COLLECTION_KEY}).
 
-    Retrieves existing published LIDVIDs from the registry, determines membership identities for each LID, and writes updated docs back to OpenSearch
+    Retrieves existing published LIDVIDs from the registry, determines membership identities for each LID, and writes updated docs back to registry db
     """
 
     args = parse_args(description=cli_description)
