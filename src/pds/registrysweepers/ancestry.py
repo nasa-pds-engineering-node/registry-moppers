@@ -115,6 +115,8 @@ def get_collection_ancestry_records(
         ]
 
         for identifier in referenced_collection_identifiers:
+            # The following is janky from an OOP perspective, but this is a special case in that PdsLidVid and PdsLid
+            # are and always will be complementary sets (given the universal set PdsProductIdentifier)
             if isinstance(identifier, PdsLidVid):
                 try:
                     # if a LIDVID is specified, add bundle to that LIDVID's record
@@ -133,7 +135,9 @@ def get_collection_ancestry_records(
                         f"No versions of collection {identifier} referenced by bundle {bundle_lidvid} exist in registry - skipping"
                     )
             else:
-                raise RuntimeError(f"Encountered unknown PdsProductIdentifier subclass {identifier.__class__}")
+                raise RuntimeError(
+                    f"Encountered product identifier of unknown type {identifier.__class__} (should be PdsLidVid or PdsLid)"
+                )
 
     # We could retain the keys for better performance, as they're used by the non-aggregate record generation, but this
     # is cleaner, so we'll regenerate the dict from the records later unless performance is a problem.
