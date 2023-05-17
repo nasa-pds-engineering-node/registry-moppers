@@ -82,22 +82,26 @@ def get_collection_ancestry_records(
 
     # Query the registry for all collection identifiers
     collections_query = product_class_query_factory(ProductClass.COLLECTION)
-    collections_source = {"includes": ["lidvid"]}
-    # TODO: switch to this line to support alternate_ids
-    # collection_identifiers_source = {"includes": ["alternate_ids"]}  # alternate_ids includes lid, lidvid, and any aliases
+    collections_source = {"includes": ["lidvid", "alternate_ids"]}
     collections_query_f = query_registry_db_or_mock(registry_db_mock, "get_collection_ancestry_records_collections")
-    collection_identifiers_docs = collections_query_f(host, collections_query, collections_source)  # type: ignore
 
     # TODO: change to for loop to support alternate_ids (generate multiple keys per element and filter out LIDs)
     #  also necessary to populate a multidirectional lookup for LIDs with aliases which can be used during LID-based
     #  reference assignment
     # Instantiate the AncestryRecords, keyed by collection LIDVID for fast access
-    ancestry_by_collection_lidvid: Dict[PdsLidVid, AncestryRecord] = {
-        PdsLidVid.from_string(doc["_source"]["lidvid"]): AncestryRecord(
-            lidvid=PdsLidVid.from_string(doc["_source"]["lidvid"])
-        )
-        for doc in collection_identifiers_docs
-    }
+    ancestry_by_collection_lidvid = {}
+    for doc in collections_query_f(host, collections_query, collections_source):
+        lidvid = PdsLidVid.from_string(doc["_source"]["lidvid"])
+        ancestry_by_collection_lidvid[lidvid] = AncestryRecord(lidvid=PdsLidVid.from_string(doc["_source"]["lidvid"]))
+
+    collection_aliases_by_lid: Dict[PdsLid, Set[PdsLid]] = {}
+    for doc in collections_query_f(host, collections_query, collections_source):
+        alternate_ids: List[str] = doc["_source"].get("alternate_ids", [])
+        lids: Set[PdsLid] = {PdsProductIdentifierFactory.from_string(id).lid for id in alternate_ids}
+        for lid in lids:
+            if lid not in collection_aliases_by_lid:
+                collection_aliases_by_lid[lid] = set()
+            collection_aliases_by_lid[lid].update(lids)
 
     # Create a dict of pointer-sets to the newly-instantiated records, binned/keyed by LID for fast access when a bundle
     #  only refers to a LID rather than a specific LIDVID
@@ -127,9 +131,12 @@ def get_collection_ancestry_records(
                     )
             elif isinstance(identifier, PdsLid):
                 try:
-                    # else if a LID is specified, add bundle to the record of every LIDVID with that LID
-                    for record in ancestry_by_collection_lid[identifier]:
-                        record.parent_bundle_lidvids.append(bundle_lidvid)
+                    for alias in collection_aliases_by_lid[identifier]:
+                        # else if a LID is specified, add bundle to the record of every LIDVID with that LID
+                        for record in ancestry_by_collection_lid[alias]:
+                            # TODO: make parent_* members sets to avoid need for this manual deduplication
+                            record.parent_bundle_lidvids.append(bundle_lidvid)
+                            record.parent_collection_lidvids = list(set(record.parent_collection_lidvids))
                 except KeyError:
                     log.warning(
                         f"No versions of collection {identifier} referenced by bundle {bundle_lidvid} exist in registry - skipping"

@@ -20,22 +20,38 @@
   "get_collection_ancestry_records_collections": [
     {
       "_source": {
-        "lidvid": "a:b:c:bundle:lidrefcollection::1.0"
+        "lidvid": "a:b:c:bundle:lidrefcollection::1.0",
+        "alternate_ids": [
+          "a:b:c:bundle:lidrefcollection::1.0",
+          "a:b:c:bundle:lidrefcollection"
+        ]
       }
     },
     {
       "_source": {
-        "lidvid": "a:b:c:bundle:lidrefcollection::2.0"
+        "lidvid": "a:b:c:bundle:lidrefcollection::2.0",
+        "alternate_ids": [
+          "a:b:c:bundle:lidrefcollection::2.0",
+          "a:b:c:bundle:lidrefcollection"
+        ]
       }
     },
     {
       "_source": {
-        "lidvid": "a:b:c:bundle:lidvidrefcollection::1.0"
+        "lidvid": "a:b:c:bundle:lidvidrefcollection::1.0",
+        "alternate_ids": [
+          "a:b:c:bundle:lidvidrefcollection::1.0",
+          "a:b:c:bundle:lidvidrefcollection"
+        ]
       }
     },
     {
       "_source": {
-        "lidvid": "a:b:c:bundle:lidvidrefcollection::2.0"
+        "lidvid": "a:b:c:bundle:lidvidrefcollection::2.0",
+        "alternate_ids": [
+          "a:b:c:bundle:lidvidrefcollection::2.0",
+          "a:b:c:bundle:lidvidrefcollection"
+        ]
       }
     }
   ],
