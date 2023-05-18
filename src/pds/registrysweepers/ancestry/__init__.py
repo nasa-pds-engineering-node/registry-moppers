@@ -14,7 +14,7 @@ from pds.registrysweepers.ancestry.generation import get_bundle_ancestry_records
 from pds.registrysweepers.ancestry.generation import get_collection_ancestry_records
 from pds.registrysweepers.ancestry.generation import get_nonaggregate_ancestry_records
 from pds.registrysweepers.utils import configure_logging
-from pds.registrysweepers.utils import HOST
+from pds.registrysweepers.utils import Host
 from pds.registrysweepers.utils import parse_args
 from pds.registrysweepers.utils import write_updated_docs
 
@@ -40,7 +40,7 @@ def run(
 
     log.info("Starting ancestry sweeper")
 
-    host = HOST(cross_cluster_remotes or [], password, base_url, username, verify_host_certs)
+    host = Host(cross_cluster_remotes or [], password, base_url, username, verify_host_certs)
 
     bundle_records = get_bundle_ancestry_records(host, registry_mock_query_f)
     collection_records = list(get_collection_ancestry_records(host, registry_mock_query_f))

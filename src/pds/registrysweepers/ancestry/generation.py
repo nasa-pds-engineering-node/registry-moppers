@@ -11,7 +11,7 @@ from pds.registrysweepers.ancestry.queries import get_bundle_ancestry_records_qu
 from pds.registrysweepers.ancestry.queries import get_collection_ancestry_records_bundles_query
 from pds.registrysweepers.ancestry.queries import get_collection_ancestry_records_collections_query
 from pds.registrysweepers.ancestry.queries import get_nonaggregate_ancestry_records_query
-from pds.registrysweepers.utils import HOST
+from pds.registrysweepers.utils import Host
 from pds.registrysweepers.utils.productidentifiers.factory import PdsProductIdentifierFactory
 from pds.registrysweepers.utils.productidentifiers.pdslid import PdsLid
 from pds.registrysweepers.utils.productidentifiers.pdslidvid import PdsLidVid
@@ -19,7 +19,7 @@ from pds.registrysweepers.utils.productidentifiers.pdslidvid import PdsLidVid
 log = logging.getLogger(__name__)
 
 
-def get_bundle_ancestry_records(host: HOST, db_mock: DbMockTypeDef = None) -> Iterable[AncestryRecord]:
+def get_bundle_ancestry_records(host: Host, db_mock: DbMockTypeDef = None) -> Iterable[AncestryRecord]:
     log.info("Generating AncestryRecords for bundles...")
     docs = get_bundle_ancestry_records_query(host, db_mock)
     return [AncestryRecord(lidvid=PdsLidVid.from_string(doc["_source"]["lidvid"])) for doc in docs]
@@ -62,7 +62,7 @@ def get_ancestry_by_collection_lid(
     return ancestry_by_collection_lid
 
 
-def get_collection_ancestry_records(host: HOST, registry_db_mock: DbMockTypeDef = None) -> Iterable[AncestryRecord]:
+def get_collection_ancestry_records(host: Host, registry_db_mock: DbMockTypeDef = None) -> Iterable[AncestryRecord]:
     log.info("Generating AncestryRecords for collections...")
     bundles_docs = get_collection_ancestry_records_bundles_query(host, registry_db_mock)
     collections_docs = list(get_collection_ancestry_records_collections_query(host, registry_db_mock))
@@ -117,7 +117,7 @@ def get_collection_ancestry_records(host: HOST, registry_db_mock: DbMockTypeDef 
 
 
 def get_nonaggregate_ancestry_records(
-    host: HOST,
+    host: Host,
     collection_ancestry_records: Iterable[AncestryRecord],
     registry_db_mock: DbMockTypeDef = None,
 ) -> Iterable[AncestryRecord]:

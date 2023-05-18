@@ -52,7 +52,7 @@ import requests
 from pds.registrysweepers.utils import _vid_as_tuple_of_int
 from pds.registrysweepers.utils import configure_logging
 from pds.registrysweepers.utils import get_extant_lidvids
-from pds.registrysweepers.utils import HOST
+from pds.registrysweepers.utils import Host
 from pds.registrysweepers.utils import parse_args
 from pds.registrysweepers.utils import write_updated_docs
 
@@ -74,7 +74,7 @@ def run(
 
     log.info("starting CLI processing")
 
-    host = HOST(cross_cluster_remotes or [], password, base_url, username, verify_host_certs)
+    host = Host(cross_cluster_remotes or [], password, base_url, username, verify_host_certs)
 
     extant_lidvids = get_extant_lidvids(host)
     successors = get_successors_by_lidvid(extant_lidvids)

@@ -15,7 +15,7 @@ from typing import Union
 
 import requests
 
-HOST = collections.namedtuple("HOST", ["cross_cluster_remotes", "password", "url", "username", "verify"])
+Host = collections.namedtuple("Host", ["cross_cluster_remotes", "password", "url", "username", "verify"])
 
 log = logging.getLogger(__name__)
 
@@ -92,7 +92,7 @@ def configure_logging(filepath: Union[str, None], log_level: int):
 
 
 def query_registry_db(
-    host: HOST,
+    host: Host,
     query: Dict,
     _source: Dict,
     index_name: str = "registry",
@@ -149,7 +149,7 @@ def query_registry_db_or_mock(mock_f: Optional[Callable[[str], Iterable[Dict]]],
     if mock_f is not None:
 
         def mock_wrapper(
-            host: HOST,
+            host: Host,
             query: Dict,
             _source: Dict,
             index_name: str = "registry",
@@ -163,7 +163,7 @@ def query_registry_db_or_mock(mock_f: Optional[Callable[[str], Iterable[Dict]]],
         return query_registry_db
 
 
-def get_extant_lidvids(host: HOST) -> Iterable[str]:
+def get_extant_lidvids(host: Host) -> Iterable[str]:
     """
     Given an OpenSearch host, return all extant LIDVIDs
     """
@@ -178,7 +178,7 @@ def get_extant_lidvids(host: HOST) -> Iterable[str]:
     return map(lambda doc: doc["_source"]["lidvid"], results)
 
 
-def write_updated_docs(host: HOST, ids_and_updates: Mapping[str, Dict], index_name: str = "registry"):
+def write_updated_docs(host: Host, ids_and_updates: Mapping[str, Dict], index_name: str = "registry"):
     """
     Given an OpenSearch host and a mapping of doc ids onto updates to those docs, write bulk updates to documents in db.
     """
