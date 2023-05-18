@@ -87,7 +87,7 @@ def get_collection_ancestry_records(host: Host, registry_db_mock: DbMockTypeDef 
         for identifier in referenced_collection_identifiers:
             if isinstance(identifier, PdsLidVid):
                 try:
-                    ancestry_by_collection_lidvid[identifier].parent_bundle_lidvids.append(bundle_lidvid)
+                    ancestry_by_collection_lidvid[identifier].parent_bundle_lidvids.add(bundle_lidvid)
                 except KeyError:
                     log.warning(
                         f"Collection {identifier} referenced by bundle {bundle_lidvid} "
@@ -97,9 +97,7 @@ def get_collection_ancestry_records(host: Host, registry_db_mock: DbMockTypeDef 
                 try:
                     for alias in collection_aliases_by_lid[identifier]:
                         for record in ancestry_by_collection_lid[alias]:
-                            # TODO: make parent_* members sets to avoid need for this manual deduplication
-                            record.parent_bundle_lidvids.append(bundle_lidvid)
-                            record.parent_collection_lidvids = list(set(record.parent_collection_lidvids))
+                            record.parent_bundle_lidvids.add(bundle_lidvid)
                 except KeyError:
                     log.warning(
                         f"No versions of collection {identifier} referenced by bundle {bundle_lidvid} "
@@ -142,7 +140,7 @@ def get_nonaggregate_ancestry_records(
                 nonaggregate_ancestry_records_by_lidvid[lidvid] = AncestryRecord(lidvid=lidvid)
 
             record = nonaggregate_ancestry_records_by_lidvid[lidvid]
-            record.parent_bundle_lidvids.extend(bundle_ancestry)
-            record.parent_collection_lidvids.append(collection_lidvid)
+            record.parent_bundle_lidvids.update(bundle_ancestry)
+            record.parent_collection_lidvids.add(collection_lidvid)
 
     return nonaggregate_ancestry_records_by_lidvid.values()
