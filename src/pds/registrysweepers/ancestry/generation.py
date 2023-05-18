@@ -20,6 +20,7 @@ log = logging.getLogger(__name__)
 
 
 def get_bundle_ancestry_records(host: HOST, db_mock: DbMockTypeDef = None) -> Iterable[AncestryRecord]:
+    log.info("Generating AncestryRecords for bundles...")
     docs = get_bundle_ancestry_records_query(host, db_mock)
     return [AncestryRecord(lidvid=PdsLidVid.from_string(doc["_source"]["lidvid"])) for doc in docs]
 
@@ -62,6 +63,7 @@ def get_ancestry_by_collection_lid(
 
 
 def get_collection_ancestry_records(host: HOST, registry_db_mock: DbMockTypeDef = None) -> Iterable[AncestryRecord]:
+    log.info("Generating AncestryRecords for collections...")
     bundles_docs = get_collection_ancestry_records_bundles_query(host, registry_db_mock)
     collections_docs = list(get_collection_ancestry_records_collections_query(host, registry_db_mock))
 
@@ -119,6 +121,8 @@ def get_nonaggregate_ancestry_records(
     collection_ancestry_records: Iterable[AncestryRecord],
     registry_db_mock: DbMockTypeDef = None,
 ) -> Iterable[AncestryRecord]:
+    log.info("Generating AncestryRecords for non-aggregate products...")
+
     # Generate lookup for the parent bundles of all collections - these will be applied to non-aggregate products too.
     bundle_ancestry_by_collection_lidvid = {
         record.lidvid: record.parent_bundle_lidvids for record in collection_ancestry_records

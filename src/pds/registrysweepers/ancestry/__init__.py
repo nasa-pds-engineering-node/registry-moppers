@@ -36,20 +36,19 @@ def run(
     ancestry_records_accumulator: Optional[List[AncestryRecord]] = None,
     bulk_updates_sink: Optional[List[Tuple[str, Dict[str, List]]]] = None,
 ):
-    # TODO: Add informational logging to stages
     configure_logging(filepath=log_filepath, log_level=log_level)
 
-    log.info("starting ancestry sweeper processing")
+    log.info("Starting ancestry sweeper")
 
     host = HOST(cross_cluster_remotes or [], password, base_url, username, verify_host_certs)
 
     bundle_records = get_bundle_ancestry_records(host, registry_mock_query_f)
-    # list cast avoids consumption of the iterable as it is used later
     collection_records = list(get_collection_ancestry_records(host, registry_mock_query_f))
     nonaggregate_records = get_nonaggregate_ancestry_records(host, collection_records, registry_mock_query_f)
 
     ancestry_records = chain(bundle_records, collection_records, nonaggregate_records)
 
+    log.info("Generating document bulk updates for AncestryRecords...")
     updates: Dict[str, Dict[str, Any]] = {}
     for record in ancestry_records:
         # Tee the stream of records into the accumulator, if one was provided (functional testing).
@@ -79,11 +78,10 @@ def run(
         updates[doc_id] = update
 
     if updates and bulk_updates_sink is None:
+        log.info("Writing bulk updates to database...")
         write_updated_docs(host, updates)
 
-    # TODO: Search for and log any orphaned non-agg products - it's reasonably sufficient to just look for any product which lacks the relevant metadata keys.
-
-    log.info("completed ancestry sweeper processing")
+    log.info("Ancestry sweeper processing complete!")
 
 
 if __name__ == "__main__":
