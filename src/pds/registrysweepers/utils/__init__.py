@@ -156,7 +156,7 @@ def query_registry_db_or_mock(mock_f: Optional[Callable[[str], Iterable[Dict]]],
             page_size: int = 10000,
             scroll_validity_duration_minutes: int = 10,
         ) -> Iterable[Dict]:
-            return mock_f(mock_query_id)  # type: ignore
+            return mock_f(mock_query_id)  # type: ignore  # see None-check above
 
         return mock_wrapper
     else:

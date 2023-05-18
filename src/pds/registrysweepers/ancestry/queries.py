@@ -33,11 +33,11 @@ def product_class_query_factory(cls: ProductClass) -> Dict:
     return queries[cls]
 
 
-def get_bundle_ancestry_records_query(host: Host, db_mock: DbMockTypeDef = None) -> Dict:
+def get_bundle_ancestry_records_query(host: Host, db_mock: DbMockTypeDef = None) -> Iterable[Dict]:
     query = product_class_query_factory(ProductClass.BUNDLE)
     _source = {"includes": ["lidvid"]}
     query_f = query_registry_db_or_mock(db_mock, "get_bundle_ancestry_records")
-    docs = query_f(host, query, _source)  # type: ignore
+    docs = query_f(host, query, _source)
 
     return docs
 
@@ -46,7 +46,7 @@ def get_collection_ancestry_records_bundles_query(host: Host, db_mock: DbMockTyp
     query = product_class_query_factory(ProductClass.BUNDLE)
     _source = {"includes": ["lidvid", "ref_lid_collection"]}
     query_f = query_registry_db_or_mock(db_mock, "get_collection_ancestry_records_bundles")
-    docs = query_f(host, query, _source)  # type: ignore
+    docs = query_f(host, query, _source)
 
     return docs
 
@@ -63,9 +63,9 @@ def get_collection_ancestry_records_collections_query(host: Host, db_mock: DbMoc
 
 def get_nonaggregate_ancestry_records_query(host: Host, registry_db_mock: DbMockTypeDef) -> Iterable[Dict]:
     # Query the registry-refs index for the contents of all collections
-    query = {"match_all": {}}  # type: ignore
+    query: Dict = {"match_all": {}}
     _source = {"includes": ["collection_lidvid", "product_lidvid"]}
     query_f = query_registry_db_or_mock(registry_db_mock, "get_nonaggregate_ancestry_records")
-    docs = query_f(host, query, _source, index_name="registry-refs")  # type: ignore
+    docs = query_f(host, query, _source, index_name="registry-refs")
 
     return docs

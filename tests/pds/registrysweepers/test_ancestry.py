@@ -3,6 +3,7 @@ import os.path
 import unittest
 from typing import Dict
 from typing import List
+from typing import Tuple
 
 from pds.registrysweepers import ancestry
 from pds.registrysweepers.ancestry import AncestryRecord
@@ -15,7 +16,7 @@ class AncestryBasicTestCase(unittest.TestCase):
     registry_query_mock = RegistryQueryMock(input_file_path)
 
     ancestry_records: List[AncestryRecord] = []
-    bulk_updates: List[Dict[str, Dict]] = []
+    bulk_updates: List[Tuple[str, Dict[str, List]]] = []
 
     expected_bundle_ancestry_by_collection = {
         "a:b:c:bundle:lidrefcollection::1.0": {"a:b:c:bundle::1.0"},
@@ -137,7 +138,7 @@ class AncestryAlternateIdsTestCase(unittest.TestCase):
     registry_query_mock = RegistryQueryMock(input_file_path)
 
     ancestry_records: List[AncestryRecord] = []
-    bulk_updates: List[Dict[str, Dict]] = []
+    bulk_updates: List[Tuple[str, Dict[str, List]]] = []
 
     @classmethod
     def setUpClass(cls) -> None:
