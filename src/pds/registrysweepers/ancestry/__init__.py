@@ -20,8 +20,8 @@ from pds.registrysweepers.utils import write_updated_docs
 
 log = logging.getLogger(__name__)
 
-METADATA_PARENT_BUNDLE_KEY = "ops:Provenance/ops:parent_bundle_identifiers"
-METADATA_PARENT_COLLECTION_KEY = "ops:Provenance/ops:parent_collection_identifiers"
+METADATA_PARENT_BUNDLE_KEY = "ops:Provenance/ops:parent_bundle_identifier"
+METADATA_PARENT_COLLECTION_KEY = "ops:Provenance/ops:parent_collection_identifier"
 
 
 def run(

@@ -112,21 +112,21 @@ class AncestryBasicTestCase(unittest.TestCase):
             update = self.updates_by_lidvid_str[str(record.lidvid)]
             self.assertEqual(
                 set(str(lidvid) for lidvid in record.parent_bundle_lidvids),
-                set(update["ops:Provenance/ops:parent_bundle_identifiers"]),
+                set(update["ops:Provenance/ops:parent_bundle_identifier"]),
             )
             self.assertEqual(
                 set(str(lidvid) for lidvid in record.parent_collection_lidvids),
-                set(update["ops:Provenance/ops:parent_collection_identifiers"]),
+                set(update["ops:Provenance/ops:parent_collection_identifier"]),
             )
 
         for doc_id, update in self.bulk_updates:
             record = self.records_by_lidvid_str[doc_id]
             self.assertEqual(
-                set(update["ops:Provenance/ops:parent_bundle_identifiers"]),
+                set(update["ops:Provenance/ops:parent_bundle_identifier"]),
                 set(str(lidvid) for lidvid in record.parent_bundle_lidvids),
             )
             self.assertEqual(
-                set(update["ops:Provenance/ops:parent_collection_identifiers"]),
+                set(update["ops:Provenance/ops:parent_collection_identifier"]),
                 set(str(lidvid) for lidvid in record.parent_collection_lidvids),
             )
 
