@@ -1,5 +1,14 @@
 # Changelog
 
+## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2023-05-22)
+
+[Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/v1.0.0...«unknown»)
+
+**Other closed issues:**
+
+- Implement ancestry [\#14](https://github.com/NASA-PDS/registry-sweepers/issues/14)
+- Add a configuration for the cloudwatch event monitoring  [\#9](https://github.com/NASA-PDS/registry-sweepers/issues/9)
+
 ## [v1.0.0](https://github.com/NASA-PDS/registry-sweepers/tree/v1.0.0) (2023-04-27)
 
 [Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/3fabe85a65d26f2509c830d02c2b5f09a2793cf7...v1.0.0)
