@@ -39,8 +39,6 @@
 # It is important to note that the document is updated, not any dependent
 # index.
 #
-import argparse
-import collections
 import json
 import logging
 import urllib.parse
@@ -51,36 +49,16 @@ from typing import Mapping
 from typing import Union
 
 import requests
+from pds.registrysweepers.utils import _vid_as_tuple_of_int
+from pds.registrysweepers.utils import configure_logging
+from pds.registrysweepers.utils import get_extant_lidvids
+from pds.registrysweepers.utils import Host
+from pds.registrysweepers.utils import parse_args
+from pds.registrysweepers.utils import write_updated_docs
 
-log = logging.getLogger("registrysweepers")
-
-HOST = collections.namedtuple("HOST", ["cross_cluster_remotes", "password", "url", "username", "verify"])
+log = logging.getLogger(__name__)
 
 METADATA_SUCCESSOR_KEY = "ops:Provenance/ops:superseded_by"
-
-
-def parse_log_level(input: str) -> int:
-    """Given a numeric or uppercase descriptive log level, return the associated int"""
-    try:
-        result = int(input)
-    except ValueError:
-        result = getattr(logging, input)
-    return result
-
-
-def _vid_as_tuple_of_int(lidvid: str):
-    major_version, minor_version = lidvid.split("::")[1].split(".")
-    return (int(major_version), int(minor_version))
-
-
-def configure_logging(filepath: Union[str, None], log_level: int):
-    logging.root.handlers = []
-    handlers: List[logging.StreamHandler] = [logging.StreamHandler()]
-
-    if filepath:
-        handlers.append(logging.FileHandler(filepath))
-
-    logging.basicConfig(level=log_level, format="%(asctime)s::%(levelname)s::%(message)s", handlers=handlers)
 
 
 def run(
@@ -96,10 +74,11 @@ def run(
 
     log.info("starting CLI processing")
 
-    host = HOST(cross_cluster_remotes or [], password, base_url, username, verify_host_certs)
+    host = Host(cross_cluster_remotes or [], password, base_url, username, verify_host_certs)
 
     extant_lidvids = get_extant_lidvids(host)
-    updates = get_successors_by_lidvid(extant_lidvids)
+    successors = get_successors_by_lidvid(extant_lidvids)
+    updates = {id: {METADATA_SUCCESSOR_KEY: successor} for id, successor in successors.items()}
 
     if updates:
         write_updated_docs(host, updates)
@@ -113,6 +92,8 @@ def get_successors_by_lidvid(extant_lidvids: Iterable[str]) -> Mapping[str, str]
     """
 
     log.info("Generating updated history...")
+
+    extant_lidvids = list(extant_lidvids)  # ensure against consumable iterator
 
     unique_lids = {lidvid.split("::")[0] for lidvid in extant_lidvids}
 
@@ -140,93 +121,14 @@ def get_successors_by_lidvid(extant_lidvids: Iterable[str]) -> Mapping[str, str]
     return successors_by_lidvid
 
 
-def get_extant_lidvids(host: HOST) -> Iterable[str]:
-    """
-    Given an OpenSearch host, return all extant LIDVIDs
-    """
-
-    log.info("Retrieving extant LIDVIDs")
-
-    cross_cluster_indexes = [node + ":registry" for node in host.cross_cluster_remotes]
-    path = ",".join(["registry"] + cross_cluster_indexes) + "/_search?scroll=10m"
-    extant_lidvids = []
-    query = {
-        "query": {"bool": {"must": [{"terms": {"ops:Tracking_Meta/ops:archive_status": ["archived", "certified"]}}]}},
-        "_source": {"includes": ["lidvid"]},
-        "size": 10000,
-    }
-
-    more_data_exists = True
-    while more_data_exists:
-        resp = requests.get(
-            urllib.parse.urljoin(host.url, path), auth=(host.username, host.password), verify=host.verify, json=query
-        )
-        resp.raise_for_status()
-
-        data = resp.json()
-        path = "_search/scroll"
-        query = {"scroll": "10m", "scroll_id": data["_scroll_id"]}
-        extant_lidvids.extend([hit["_source"]["lidvid"] for hit in data["hits"]["hits"]])
-        more_data_exists = len(extant_lidvids) < data["hits"]["total"]["value"]
-
-        hits = data["hits"]["total"]["value"]
-        percent_hit = int(round(len(extant_lidvids) / hits * 100))
-        log.info(f"   ...{len(extant_lidvids)} of {hits} retrieved ({percent_hit}%)...")
-
-    if "scroll_id" in query:
-        path = f'_search/scroll/{query["scroll_id"]}'
-        requests.delete(urllib.parse.urljoin(host.url, path), auth=(host.username, host.password), verify=host.verify)
-
-    log.info("Finished retrieving LIDVIDs with current direct successors!")
-
-    return extant_lidvids
-
-
-def write_updated_docs(host: HOST, lidvids_and_successors: Mapping[str, str]):
-    """
-    Given an OpenSearch host and a mapping of LIDVIDs onto their direct successors, write provenance history updates
-    to documents in db.
-    """
-    log.info("Bulk update %d documents", len(lidvids_and_successors))
-
-    bulk_updates = []
-    ccs_indexes = [node + ":registry" for node in host.cross_cluster_remotes]
-    headers = {"Content-Type": "application/x-ndjson"}
-    path = ",".join(["registry"] + ccs_indexes) + "/_bulk"
-
-    for lidvid, direct_successor in lidvids_and_successors.items():
-        bulk_updates.append(json.dumps({"update": {"_id": lidvid}}))
-        bulk_updates.append(json.dumps({"doc": {METADATA_SUCCESSOR_KEY: direct_successor}}))
-
-    bulk_data = "\n".join(bulk_updates) + "\n"
-
-    log.info(f"writing bulk update for {len(bulk_updates)} products...")
-    response = requests.put(
-        urllib.parse.urljoin(host.url, path),
-        auth=(host.username, host.password),
-        data=bulk_data,
-        headers=headers,
-        verify=host.verify,
-    )
-    response.raise_for_status()
-
-    response_content = response.json()
-    if response_content.get("errors"):
-        for item in response_content["items"]:
-            if "error" in item:
-                log.error("update error (%d): %s", item["status"], str(item["error"]))
-    else:
-        log.info("bulk updates were successful")
-
-
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(
-        description=f"""
+    cli_description = f"""
     Update registry records for non-latest LIDVIDs with up-to-date direct successor metadata ({METADATA_SUCCESSOR_KEY}).
 
-    Retrieves existing published LIDVIDs from the registry, determines history for each LID, and writes updated docs back to OpenSearch
-    """,
-        epilog="""EXAMPLES:
+    Retrieves existing published LIDVIDs from the registry, determines history for each LID, and writes updated docs back to registry db.
+    """
+
+    cli_epilog = """EXAMPLES:
 
     - command for opensearch running in a container with the sockets published at 9200 for data ingested for full day March 11, 2020:
 
@@ -239,42 +141,9 @@ if __name__ == "__main__":
     - command for opensearch running in a cluster
 
       registrysweepers.py -b https://search.us-west-2.es.amazonaws.com -c remote1 remote2 remote3 remote4 -u admin -p admin
-    """,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    ap.add_argument("-b", "--base-URL", required=True, type=str)
-    ap.add_argument(
-        "-c",
-        "--ccs-remotes",
-        default=[],
-        nargs="*",
-        help="names of additional opensearch cross-cluster remotes, space-separated",
-    )
-    ap.add_argument("-l", "--log-file", default=None, required=False, help="file to write the log messages")
-    ap.add_argument(
-        "-L",
-        "--log-level",
-        default="ERROR",
-        required=False,
-        type=parse_log_level,
-        help="Python logging level as an int or string like INFO for logging.INFO [%(default)s]",
-    )
-    ap.add_argument(
-        "-p",
-        "--password",
-        default=None,
-        required=False,
-        help="password to login to opensearch leaving it blank if opensearch does not require login",
-    )
-    ap.add_argument(
-        "-u",
-        "--username",
-        default=None,
-        required=False,
-        help="username to login to opensearch leaving it blank if opensearch does not require login",
-    )
-    ap.add_argument("-v", "--verify", action="store_true", default=False, help="verify the host certificates")
-    args = ap.parse_args()
+    """
+
+    args = parse_args(description=cli_description, epilog=cli_epilog)
 
     run(
         base_url=args.base_URL,
