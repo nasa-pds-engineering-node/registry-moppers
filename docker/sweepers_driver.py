@@ -62,7 +62,10 @@ from typing import Callable, Iterable
 
 from pds.registrysweepers import provenance, ancestry
 
+log = logging.getLogger(__name__)
+
 opensearch_endpoint = os.environ.get("PROV_ENDPOINT")
+log.info(f'Targeting base OpenSearch endpoint "{opensearch_endpoint}"')
 
 username = None
 password = None
@@ -105,10 +108,18 @@ run_provenance = run_factory(provenance.run)
 run_ancestry = run_factory(ancestry.run)
 
 cross_cluster_remote_node_batches = parse_cross_cluster_remotes(os.environ.get("PROV_REMOTES"))
+log.info(f'Running sweepers')
 if cross_cluster_remote_node_batches is None:
+    log.info(f'No CCS remotes specified - running sweepers against base OpenSearch endpoint only')
     run_provenance()
     run_ancestry()
 else:
+    f'CCS remotes specified: {json.dumps(cross_cluster_remote_node_batches)}'
     for cross_cluster_remotes in cross_cluster_remote_node_batches:
+        targets_msg_str = f'base OpenSearch and the following remotes: {json.dumps(cross_cluster_remotes)}'
+        log.info(f'Running sweepers against {targets_msg_str}')
         run_provenance(cross_cluster_remotes=cross_cluster_remotes)
         run_ancestry(cross_cluster_remotes=cross_cluster_remotes)
+        log.info(f'Successfully ran sweepers against base OpenSearch and {targets_msg_str}')
+
+log.info(f'All sweepers ran successfully successfully!')

@@ -88,7 +88,7 @@ def configure_logging(filepath: Union[str, None], log_level: int):
     if filepath:
         handlers.append(logging.FileHandler(filepath))
 
-    logging.basicConfig(level=log_level, format="%(asctime)s::%(levelname)s::%(message)s", handlers=handlers)
+    logging.basicConfig(level=log_level, format="%(asctime)s::%(name)s::%(levelname)s::%(message)s", handlers=handlers)
 
 
 def query_registry_db(
@@ -112,7 +112,7 @@ def query_registry_db(
         "size": page_size,
     }
 
-    log.debug(f"Initiating query: {req_content}")
+    log.info(f"Initiating query: {req_content}")
 
     cross_cluster_indexes = [f"{node}:{index_name}" for node in host.cross_cluster_remotes]
     path = ",".join([index_name] + cross_cluster_indexes) + f"/_search?scroll={scroll_validity_duration_minutes}m"
@@ -133,10 +133,20 @@ def query_registry_db(
         req_content = {"scroll": f"{scroll_validity_duration_minutes}m", "scroll_id": data["_scroll_id"]}
 
         total_hits = data["hits"]["total"]["value"]
-        log.info(f"   paging query ({served_hits} to {min(served_hits + page_size, total_hits)} of {total_hits})")
+        log.debug(f"   paging query ({served_hits} to {min(served_hits + page_size, total_hits)} of {total_hits})")
+
+        last_info_log_at_percentage = 0
+        log.info("Query progress: 0%")
+
         for hit in data["hits"]["hits"]:
-            yield hit
             served_hits += 1
+
+            percentage_of_hits_served = int(served_hits / total_hits * 100)
+            if last_info_log_at_percentage is None or percentage_of_hits_served > (last_info_log_at_percentage + 5):
+                last_info_log_at_percentage = percentage_of_hits_served
+                log.info(f"Query progress: {percentage_of_hits_served}%")
+
+            yield hit
 
         more_data_exists = served_hits < data["hits"]["total"]["value"]
 
