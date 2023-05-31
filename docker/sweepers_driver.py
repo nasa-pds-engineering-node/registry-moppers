@@ -64,6 +64,10 @@ from pds.registrysweepers import provenance, ancestry
 
 log = logging.getLogger(__name__)
 
+dev_mode = str(os.environ.get("DEV_MODE")).lower() not in {'none', '', '0', 'false'}
+if dev_mode:
+    log.warning(f'Operating in development mode - host verification disabled')
+
 opensearch_endpoint = os.environ.get("PROV_ENDPOINT")
 log.info(f'Targeting base OpenSearch endpoint "{opensearch_endpoint}"')
 
@@ -83,7 +87,8 @@ def run_factory(sweeper_f: Callable) -> Callable:
         username=username,
         password=password,
         log_filepath='provenance.log',
-        log_level=logging.INFO  # TODO: pull this from LOGLEVEL env var
+        log_level=logging.INFO,  # TODO: pull this from LOGLEVEL env var
+        verify_host_certs = True if not dev_mode else False
     )
 
 

@@ -61,7 +61,7 @@ def parse_args(description: str = "", epilog: str = "") -> Namespace:
         required=False,
         help="username to login to the registry db, leaving it blank if db does not require login",
     )
-    ap.add_argument("-v", "--verify", action="store_true", default=False, help="verify the host certificates")
+    ap.add_argument("--insecure", action="store_true", default=False, help="skip verification of the host certificates")
 
     args = ap.parse_args()
     return args
