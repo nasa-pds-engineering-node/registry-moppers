@@ -9,7 +9,7 @@ variable "node_name_abbr" {
 }
 
 variable "venue" {
-  description = "Deployment venue (prod, test, dev)"
+  description = "Deployment venue (prod, test, dev, delta, gamma, etc.)"
   default = "dev"
 }
 

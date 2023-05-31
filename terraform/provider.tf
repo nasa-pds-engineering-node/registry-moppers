@@ -14,7 +14,7 @@ terraform {
   #
   backend "s3" {
     bucket = "pds-state"
-    # key = "project-services/en/${var.venue}/provenance.tfstate"
+    # key = "project-services/en/${var.venue}/registry-sweepers.tfstate"
     # region = var.aws_region
   }
 }

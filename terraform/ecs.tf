@@ -1,11 +1,11 @@
 # Define the cluster
 resource "aws_ecs_cluster" "ecs_cluster" {
-  name = "pds-${var.node_name_abbr}-${var.venue}-provenance"
+  name = "pds-${var.node_name_abbr}-${var.venue}-registry-sweepers"
 
   tags = {
     Alfa = var.node_name_abbr
     Bravo = var.venue
-    Charlie = "registry-provenance"
+    Charlie = "registry-sweepers"
   }
 }
 
@@ -16,17 +16,17 @@ data "aws_ecr_repository" "pds-registry-api-service" {
 
 # Log groups hold logs from our app.
 resource "aws_cloudwatch_log_group" "pds-prov-log-group" {
-  name = "/ecs/pds-${var.node_name_abbr}-${var.venue}-provenance-task"
+  name = "/ecs/pds-${var.node_name_abbr}-${var.venue}-registry-sweepers-task"
 
   tags = {
     Alfa = var.node_name_abbr
     Bravo = var.venue
-    Charlie = "registry-provenance"
+    Charlie = "registry-sweepers"
   }
 }
 
 # The main service.
-resource "aws_ecs_service" "pds-provenance-service" {
+resource "aws_ecs_service" "pds-registry-sweepers-service" {
   name            = "pds-${var.node_name_abbr}-${var.venue}-prov-service"
   task_definition = aws_ecs_task_definition.pds-prov-ecs-task.arn
   cluster         = aws_ecs_cluster.ecs_cluster.id
@@ -43,7 +43,7 @@ resource "aws_ecs_service" "pds-provenance-service" {
   tags = {
     Alfa = var.node_name_abbr
     Bravo = var.venue
-    Charlie = "registry-provenance"
+    Charlie = "registry-sweepers"
   }
 }
 
@@ -87,7 +87,7 @@ EOF
   execution_role_arn = data.aws_iam_role.pds-task-execution-role.arn
   task_role_arn      = data.aws_iam_role.pds-task-execution-role.arn
 
-  # provenance is somewhat memory intenstive, hence asking for 56GB
+  # provenance sweeper is somewhat memory intensive, hence asking for 56GB
   # memory which corresponds to 8,192 CPU units (8 vCPU)
   cpu                      = 8192
   memory                   = 57344
@@ -99,7 +99,7 @@ EOF
   tags = {
     Alfa = var.node_name_abbr
     Bravo = var.venue
-    Charlie = "registry-provenance"
+    Charlie = "registry-sweepers"
   }
 }
 
@@ -108,9 +108,9 @@ data "aws_iam_role" "pds-task-execution-role" {
   name    = "am-ecs-task-execution"
 }
 
-resource "aws_scheduler_schedule" "provenance_schedule" {
-  name        = "pds-provenance-schedule"
-  description = "PDS scheduled provenance execution"
+resource "aws_scheduler_schedule" "registry-sweepers_schedule" {
+  name        = "pds-registry-sweepers-schedule"
+  description = "PDS scheduled registry-sweepers execution"
 
   flexible_time_window {
     mode = "OFF"
