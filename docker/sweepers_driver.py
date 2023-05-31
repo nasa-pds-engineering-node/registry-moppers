@@ -58,7 +58,7 @@ import functools
 import json
 import logging
 import os
-from typing import Callable
+from typing import Callable, Iterable
 
 from pds.registrysweepers import provenance, ancestry
 
@@ -84,17 +84,31 @@ def run_factory(sweeper_f: Callable) -> Callable:
     )
 
 
+def parse_cross_cluster_remotes(env_var_value: str | None) -> Iterable[Iterable[str]] | None:
+    """
+    Given the env var value specifying the CCS remote node-sets, return the value as a list of batches, where each batch
+    is a list of remotes to be processed at the same time.  Returns None if the value is not set, empty, or specifies an
+    empty list of remotes.
+    """
+
+    if not env_var_value:
+        return None
+
+    content = json.loads(env_var_value)
+    if len(content) < 1:
+        return None
+
+    return [batch.split() for batch in content]
+
+
 run_provenance = run_factory(provenance.run)
 run_ancestry = run_factory(ancestry.run)
 
-cross_cluster_remote_batches = os.environ.get("PROV_REMOTES") or None
-if cross_cluster_remote_batches is None:
+cross_cluster_remote_node_batches = parse_cross_cluster_remotes(os.environ.get("PROV_REMOTES"))
+if cross_cluster_remote_node_batches is None:
     run_provenance()
     run_ancestry()
 else:
-    remote_nodesets = json.loads(cross_cluster_remote_batches)
-    for remote_nodeset in remote_nodesets:
-        cross_cluster_remotes = remote_nodeset.split()
-
+    for cross_cluster_remotes in cross_cluster_remote_node_batches:
         run_provenance(cross_cluster_remotes=cross_cluster_remotes)
         run_ancestry(cross_cluster_remotes=cross_cluster_remotes)
