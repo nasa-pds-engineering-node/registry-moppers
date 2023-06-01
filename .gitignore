@@ -93,6 +93,7 @@ var/
 bin/
 .*.swp
 typescript
+/terraform/
 
 # OS-specific artifacts
 .DS_Store
