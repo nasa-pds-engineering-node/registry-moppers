@@ -61,12 +61,16 @@ import os
 from typing import Callable, Iterable
 
 from pds.registrysweepers import provenance, ancestry
+from pds.registrysweepers.utils import configure_logging
 
+configure_logging(filepath=None, log_level=logging.INFO)
 log = logging.getLogger(__name__)
 
 dev_mode = str(os.environ.get("DEV_MODE")).lower() not in {'none', '', '0', 'false'}
 if dev_mode:
     log.warning(f'Operating in development mode - host verification disabled')
+    import urllib3
+    urllib3.disable_warnings()
 
 opensearch_endpoint = os.environ.get("PROV_ENDPOINT")
 log.info(f'Targeting base OpenSearch endpoint "{opensearch_endpoint}"')
