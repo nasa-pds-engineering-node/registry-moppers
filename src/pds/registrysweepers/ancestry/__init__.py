@@ -29,7 +29,7 @@ def run(
     username: str,
     password: str,
     cross_cluster_remotes=None,
-    verify_host_certs: bool = False,
+    verify_host_certs: bool = True,
     log_filepath: Union[str, None] = None,
     log_level: int = logging.INFO,
     registry_mock_query_f: Optional[Callable[[str], Iterable[Dict]]] = None,
@@ -98,7 +98,7 @@ if __name__ == "__main__":
         username=args.username,
         password=args.password,
         cross_cluster_remotes=args.cluster_nodes,
-        verify_host_certs=args.verify,
+        verify_host_certs=not args.insecure,
         log_level=args.log_level,
         log_filepath=args.log_file,
     )

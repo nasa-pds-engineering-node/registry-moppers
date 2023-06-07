@@ -15,7 +15,7 @@ resource "aws_ssm_parameter" "prov_endpoint_parameter" {
   tags = {
     Alfa = var.node_name_abbr
     Bravo = var.venue
-    Charlie = "registry-provenance"
+    Charlie = "registry-sweepers"
   }
 }
 
@@ -26,16 +26,16 @@ resource "aws_ssm_parameter" "prov_endpoint_parameter" {
 # Note that '-ccs' is missing from rms-prod and psa-prod
 #
 # Remotes are organized into sets that are processed in one
-# execution of the provenance script.
+# execution of the registry-sweepers script suite.
 #
 resource "aws_ssm_parameter" "prov_remotes_parameter" {
-  name = "/pds/${var.node_name_abbr}/${var.venue}/provenance/remote_lists"
+  name = "/pds/${var.node_name_abbr}/${var.venue}/registry-sweepers/remote_lists"
   type = "String"
   value = var.prov_remote_lists
 
   tags = {
     Alfa = var.node_name_abbr
     Bravo = var.venue
-    Charlie = "registry-provenance"
+    Charlie = "registry-sweepers"
   }
 }
