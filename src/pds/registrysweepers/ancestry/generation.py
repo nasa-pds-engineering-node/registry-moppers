@@ -22,15 +22,37 @@ log = logging.getLogger(__name__)
 def get_bundle_ancestry_records(host: Host, db_mock: DbMockTypeDef = None) -> Iterable[AncestryRecord]:
     log.info("Generating AncestryRecords for bundles...")
     docs = get_bundle_ancestry_records_query(host, db_mock)
-    return [AncestryRecord(lidvid=PdsLidVid.from_string(doc["_source"]["lidvid"])) for doc in docs]
+    for doc in docs:
+        try:
+            yield AncestryRecord(lidvid=PdsLidVid.from_string(doc["_source"]["lidvid"]))
+        except (ValueError, KeyError) as err:
+            log.warning(
+                'Failed to instantiate AncestryRecord from document in index "%s" with id "%s" due to %s: %s',
+                doc.get("_index"),
+                doc.get("_id"),
+                type(err),
+                err,
+            )
+            continue
 
 
 def get_ancestry_by_collection_lidvid(collections_docs: Iterable[Dict]) -> Mapping[PdsLidVid, AncestryRecord]:
     # Instantiate the AncestryRecords, keyed by collection LIDVID for fast access
+
     ancestry_by_collection_lidvid = {}
     for doc in collections_docs:
-        lidvid = PdsLidVid.from_string(doc["_source"]["lidvid"])
-        ancestry_by_collection_lidvid[lidvid] = AncestryRecord(lidvid=PdsLidVid.from_string(doc["_source"]["lidvid"]))
+        try:
+            lidvid = PdsLidVid.from_string(doc["_source"]["lidvid"])
+            ancestry_by_collection_lidvid[lidvid] = AncestryRecord(lidvid=lidvid)
+        except (ValueError, KeyError) as err:
+            log.warning(
+                'Failed to instantiate AncestryRecord from document in index "%s" with id "%s" due to %s: %s',
+                doc.get("_index"),
+                doc.get("_id"),
+                type(err),
+                err,
+            )
+            continue
 
     return ancestry_by_collection_lidvid
 
@@ -76,10 +98,20 @@ def get_collection_ancestry_records(host: Host, registry_db_mock: DbMockTypeDef 
 
     # For each bundle, add it to the bundle-ancestry of every collection it references
     for doc in bundles_docs:
-        bundle_lidvid = PdsLidVid.from_string(doc["_source"]["lidvid"])
-        referenced_collection_identifiers = [
-            PdsProductIdentifierFactory.from_string(id) for id in doc["_source"]["ref_lid_collection"]
-        ]
+        try:
+            bundle_lidvid = PdsLidVid.from_string(doc["_source"]["lidvid"])
+            referenced_collection_identifiers = [
+                PdsProductIdentifierFactory.from_string(id) for id in doc["_source"]["ref_lid_collection"]
+            ]
+        except (ValueError, KeyError) as err:
+            log.warning(
+                'Failed to parse LIDVID and/or collection reference identifiers from document in index "%s" with id "%s" due to %s: %s',
+                doc.get("_index"),
+                doc.get("_id"),
+                type(err),
+                err,
+            )
+            continue
 
         # For each identifier
         #   - if a LIDVID is specified, add bundle to that LIDVID's record
@@ -131,10 +163,20 @@ def get_nonaggregate_ancestry_records(
     nonaggregate_ancestry_records_by_lidvid = {}
     # For each collection, add the collection and its bundle ancestry to all products the collection contains
     for doc in collection_refs_query_docs:
-        collection_lidvid = PdsLidVid.from_string(doc["_source"]["collection_lidvid"])
-        bundle_ancestry = bundle_ancestry_by_collection_lidvid[collection_lidvid]
+        try:
+            collection_lidvid = PdsLidVid.from_string(doc["_source"]["collection_lidvid"])
+            bundle_ancestry = bundle_ancestry_by_collection_lidvid[collection_lidvid]
+            nonaggregate_lidvids = [PdsLidVid.from_string(s) for s in doc["_source"]["product_lidvid"]]
+        except (ValueError, KeyError) as err:
+            log.warning(
+                'Failed to parse collection and/or product LIDVIDs from document in index "%s" with id "%s" due to %s: %s',
+                doc.get("_index"),
+                doc.get("_id"),
+                type(err),
+                err,
+            )
+            continue
 
-        nonaggregate_lidvids = [PdsLidVid.from_string(s) for s in doc["_source"]["product_lidvid"]]
         for lidvid in nonaggregate_lidvids:
             if lidvid not in nonaggregate_ancestry_records_by_lidvid:
                 nonaggregate_ancestry_records_by_lidvid[lidvid] = AncestryRecord(lidvid=lidvid)
