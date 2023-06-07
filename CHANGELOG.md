@@ -1,11 +1,12 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2023-05-22)
+## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2023-06-07)
 
 [Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/v1.0.0...«unknown»)
 
 **Other closed issues:**
 
+- Prepare the deployment of the registry-sweeper on AWS \(stage\) [\#16](https://github.com/NASA-PDS/registry-sweepers/issues/16)
 - Implement ancestry [\#14](https://github.com/NASA-PDS/registry-sweepers/issues/14)
 - Add a configuration for the cloudwatch event monitoring  [\#9](https://github.com/NASA-PDS/registry-sweepers/issues/9)
 
