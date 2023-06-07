@@ -68,7 +68,7 @@ log = logging.getLogger(__name__)
 
 dev_mode = str(os.environ.get("DEV_MODE")).lower() not in {'none', '', '0', 'false'}
 if dev_mode:
-    log.warning(f'Operating in development mode - host verification disabled')
+    log.warning('Operating in development mode - host verification disabled')
     import urllib3
     urllib3.disable_warnings()
 
@@ -92,7 +92,7 @@ def run_factory(sweeper_f: Callable) -> Callable:
         password=password,
         log_filepath='provenance.log',
         log_level=logging.INFO,  # TODO: pull this from LOGLEVEL env var
-        verify_host_certs = True if not dev_mode else False
+        verify_host_certs=True if not dev_mode else False
     )
 
 
@@ -117,13 +117,13 @@ run_provenance = run_factory(provenance.run)
 run_ancestry = run_factory(ancestry.run)
 
 cross_cluster_remote_node_batches = parse_cross_cluster_remotes(os.environ.get("PROV_REMOTES"))
-log.info(f'Running sweepers')
+log.info('Running sweepers')
 if cross_cluster_remote_node_batches is None:
-    log.info(f'No CCS remotes specified - running sweepers against base OpenSearch endpoint only')
+    log.info('No CCS remotes specified - running sweepers against base OpenSearch endpoint only')
     run_provenance()
     run_ancestry()
 else:
-    f'CCS remotes specified: {json.dumps(cross_cluster_remote_node_batches)}'
+    log.info(f'CCS remotes specified: {json.dumps(cross_cluster_remote_node_batches)}')
     for cross_cluster_remotes in cross_cluster_remote_node_batches:
         targets_msg_str = f'base OpenSearch and the following remotes: {json.dumps(cross_cluster_remotes)}'
         log.info(f'Running sweepers against {targets_msg_str}')
