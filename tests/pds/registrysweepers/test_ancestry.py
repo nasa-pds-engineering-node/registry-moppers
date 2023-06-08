@@ -243,5 +243,40 @@ class AncestryAlternateIdsTestCase(unittest.TestCase):
         self.assertSetEqual(v1_expected_parent_bundle_lidvids, {str(lv) for lv in product_v3.parent_bundle_lidvids})
 
 
+class AncestryMalformedDocsTestCase(unittest.TestCase):
+    input_file_path = os.path.abspath(
+        "./tests/pds/registrysweepers/test_ancestry_mock_AncestryMalformedDocsTestCase.json"
+    )
+    registry_query_mock = RegistryQueryMock(input_file_path)
+
+    ancestry_records: List[AncestryRecord] = []
+    bulk_updates: List[Tuple[str, Dict[str, List]]] = []
+
+    def test_ancestry_completes_without_fatal_error(self):
+        ancestry.run(
+            base_url="",
+            username="",
+            password="",
+            registry_mock_query_f=self.registry_query_mock.get_mocked_query,
+            ancestry_records_accumulator=self.ancestry_records,
+            bulk_updates_sink=self.bulk_updates,
+        )
+
+        self.bundle_records = [r for r in self.ancestry_records if r.lidvid.is_bundle()]
+        self.collection_records = [r for r in self.ancestry_records if r.lidvid.is_collection()]
+        self.nonaggregate_records = [r for r in self.ancestry_records if r.lidvid.is_basic_product()]
+
+        self.records_by_lidvid_str = {str(r.lidvid): r for r in self.ancestry_records}
+        self.bundle_records_by_lidvid_str = {str(r.lidvid): r for r in self.ancestry_records if r.lidvid.is_bundle()}
+        self.collection_records_by_lidvid_str = {
+            str(r.lidvid): r for r in self.ancestry_records if r.lidvid.is_collection()
+        }
+        self.nonaggregate_records_by_lidvid_str = {
+            str(r.lidvid): r for r in self.ancestry_records if r.lidvid.is_basic_product()
+        }
+
+        self.updates_by_lidvid_str = {id: content for id, content in self.bulk_updates}
+
+
 if __name__ == "__main__":
     unittest.main()
