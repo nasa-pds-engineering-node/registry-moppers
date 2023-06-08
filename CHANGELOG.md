@@ -1,11 +1,16 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2023-06-07)
+## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2023-06-08)
 
 [Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/v1.0.0...«unknown»)
 
+**Defects:**
+
+- Malformed product docs break ancestry sweeper [\#20](https://github.com/NASA-PDS/registry-sweepers/issues/20)
+
 **Other closed issues:**
 
+- Catch empty remotes list and add logging to sweepers\_driver [\#21](https://github.com/NASA-PDS/registry-sweepers/issues/21)
 - Prepare the deployment of the registry-sweeper on AWS \(stage\) [\#16](https://github.com/NASA-PDS/registry-sweepers/issues/16)
 - Implement ancestry [\#14](https://github.com/NASA-PDS/registry-sweepers/issues/14)
 - Add a configuration for the cloudwatch event monitoring  [\#9](https://github.com/NASA-PDS/registry-sweepers/issues/9)
