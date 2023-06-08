@@ -5,6 +5,7 @@ import json
 import logging
 import urllib.parse
 from argparse import Namespace
+from typing import Any
 from typing import Callable
 from typing import Dict
 from typing import Iterable
@@ -222,3 +223,19 @@ def write_updated_docs(host: Host, ids_and_updates: Mapping[str, Dict], index_na
                 log.error("update error (%d): %s", item["status"], str(item["error"]))
     else:
         log.info("bulk updates were successful")
+
+
+def coerce_list_type(db_value: Any) -> List[Any]:
+    """
+    Coerce a non-array-typed legacy db record into a list containing itself as the only element, or return the
+    original argument if it is already an array (list).  This is sometimes necessary to support legacy db records which
+    did not wrap singleton properties in an enclosing array.
+    """
+
+    return (
+        db_value
+        if type(db_value) is list
+        else [
+            db_value,
+        ]
+    )
