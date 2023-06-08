@@ -7,6 +7,9 @@ from typing import Tuple
 
 from pds.registrysweepers import ancestry
 from pds.registrysweepers.ancestry import AncestryRecord
+from pds.registrysweepers.ancestry import get_collection_ancestry_records
+from pds.registrysweepers.utils import Host
+from pds.registrysweepers.utils.productidentifiers.pdslidvid import PdsLidVid
 
 from tests.mocks.registryquerymock import RegistryQueryMock
 
@@ -276,6 +279,29 @@ class AncestryMalformedDocsTestCase(unittest.TestCase):
         }
 
         self.updates_by_lidvid_str = {id: content for id, content in self.bulk_updates}
+
+
+class AncestryLegacyTypesTestCase(unittest.TestCase):
+    input_file_path = os.path.abspath(
+        "./tests/pds/registrysweepers/test_ancestry_mock_AncestryLegacyTypesTestCase.json"
+    )
+    registry_query_mock = RegistryQueryMock(input_file_path)
+
+    def test_collection_refs_parsing(self):
+        host_stub = Host(None, None, None, None, None)
+        query_mock_f = self.registry_query_mock.get_mocked_query
+        collection_ancestry_records = list(get_collection_ancestry_records(host_stub, query_mock_f))
+
+        self.assertEqual(1, len(collection_ancestry_records))
+
+        expected_collection_lidvid = PdsLidVid.from_string("a:b:c:bundle:lidrefcollection::1.0")
+        expected_parent_bundle_lidvid = PdsLidVid.from_string("a:b:c:bundle::1.0")
+        expected_record = AncestryRecord(
+            lidvid=expected_collection_lidvid,
+            parent_collection_lidvids=set(),
+            parent_bundle_lidvids={expected_parent_bundle_lidvid},
+        )
+        self.assertEqual(expected_record, collection_ancestry_records[0])
 
 
 if __name__ == "__main__":

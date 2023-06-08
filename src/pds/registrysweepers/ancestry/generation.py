@@ -11,6 +11,7 @@ from pds.registrysweepers.ancestry.queries import get_bundle_ancestry_records_qu
 from pds.registrysweepers.ancestry.queries import get_collection_ancestry_records_bundles_query
 from pds.registrysweepers.ancestry.queries import get_collection_ancestry_records_collections_query
 from pds.registrysweepers.ancestry.queries import get_nonaggregate_ancestry_records_query
+from pds.registrysweepers.utils import coerce_list_type
 from pds.registrysweepers.utils import Host
 from pds.registrysweepers.utils.productidentifiers.factory import PdsProductIdentifierFactory
 from pds.registrysweepers.utils.productidentifiers.pdslid import PdsLid
@@ -101,7 +102,8 @@ def get_collection_ancestry_records(host: Host, registry_db_mock: DbMockTypeDef 
         try:
             bundle_lidvid = PdsLidVid.from_string(doc["_source"]["lidvid"])
             referenced_collection_identifiers = [
-                PdsProductIdentifierFactory.from_string(id) for id in doc["_source"]["ref_lid_collection"]
+                PdsProductIdentifierFactory.from_string(id)
+                for id in coerce_list_type(doc["_source"]["ref_lid_collection"])
             ]
         except (ValueError, KeyError) as err:
             log.warning(
