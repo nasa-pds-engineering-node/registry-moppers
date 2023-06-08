@@ -7,6 +7,7 @@
 **Defects:**
 
 - Malformed product docs break ancestry sweeper [\#20](https://github.com/NASA-PDS/registry-sweepers/issues/20)
+- Bundle documents with string-like reference properties are not handled well [\#19](https://github.com/NASA-PDS/registry-sweepers/issues/19)
 
 **Other closed issues:**
 
