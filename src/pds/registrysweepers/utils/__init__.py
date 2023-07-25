@@ -5,6 +5,7 @@ import json
 import logging
 import urllib.parse
 from argparse import Namespace
+from datetime import datetime
 from typing import Any
 from typing import Callable
 from typing import Dict
@@ -277,3 +278,11 @@ def coerce_list_type(db_value: Any) -> List[Any]:
             db_value,
         ]
     )
+
+
+def get_human_readable_elapsed_since(begin: datetime) -> str:
+    elapsed_seconds = (datetime.now() - begin).total_seconds()
+    h = int(elapsed_seconds / 3600)
+    m = int(elapsed_seconds % 3600 / 60)
+    s = int(elapsed_seconds % 60)
+    return (f"{h}h" if h else "") + (f"{m}m" if m else "") + f"{s}s"
