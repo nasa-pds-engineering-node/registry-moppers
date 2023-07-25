@@ -58,10 +58,11 @@ import functools
 import json
 import logging
 import os
+from datetime import datetime
 from typing import Callable, Iterable
 
 from pds.registrysweepers import provenance, ancestry
-from pds.registrysweepers.utils import configure_logging
+from pds.registrysweepers.utils import configure_logging, get_human_readable_elapsed_since
 
 configure_logging(filepath=None, log_level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -126,6 +127,7 @@ run_ancestry = run_factory(ancestry.run)
 
 cross_cluster_remote_node_batches = parse_cross_cluster_remotes(os.environ.get("PROV_REMOTES"))
 log.info('Running sweepers')
+execution_begin = datetime.now()
 if cross_cluster_remote_node_batches is None:
     log.info('No CCS remotes specified - running sweepers against base OpenSearch endpoint only')
     run_provenance()
@@ -139,4 +141,4 @@ else:
         run_ancestry(cross_cluster_remotes=cross_cluster_remotes)
         log.info(f'Successfully ran sweepers against base OpenSearch and {targets_msg_str}')
 
-log.info(f'All sweepers ran successfully successfully!')
+log.info(f'Sweepers successfully executed in {get_human_readable_elapsed_since(execution_begin)}')
