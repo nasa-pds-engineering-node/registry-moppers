@@ -1,11 +1,12 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2023-07-19)
+## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2023-07-25)
 
 [Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/v1.0.0...«unknown»)
 
 **Defects:**
 
+- registry-sweepers breaks when run against production-scale data [\#28](https://github.com/NASA-PDS/registry-sweepers/issues/28)
 - Malformed product docs break ancestry sweeper [\#20](https://github.com/NASA-PDS/registry-sweepers/issues/20)
 - Bundle documents with string-like reference properties are not handled well [\#19](https://github.com/NASA-PDS/registry-sweepers/issues/19)
 
