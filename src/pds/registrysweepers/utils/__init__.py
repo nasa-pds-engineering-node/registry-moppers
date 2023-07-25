@@ -13,8 +13,11 @@ from typing import List
 from typing import Mapping
 from typing import Optional
 from typing import Union
+from urllib.error import HTTPError
 
 import requests
+from retry import retry
+from retry.api import retry_call
 
 Host = collections.namedtuple("Host", ["cross_cluster_remotes", "password", "url", "username", "verify"])
 
@@ -121,11 +124,14 @@ def query_registry_db(
 
     more_data_exists = True
     while more_data_exists:
-        resp = requests.get(
-            urllib.parse.urljoin(host.url, path),
-            auth=(host.username, host.password),
-            verify=host.verify,
-            json=req_content,
+        resp = retry_call(
+            requests.get,
+            fargs=[urllib.parse.urljoin(host.url, path)],
+            fkwargs={"auth": (host.username, host.password), "verify": host.verify, "json": req_content},
+            tries=4,
+            delay=2,
+            backoff=2,
+            logger=log,
         )
         resp.raise_for_status()
 
@@ -153,7 +159,17 @@ def query_registry_db(
 
     if "scroll_id" in req_content:
         path = f'_search/scroll/{req_content["scroll_id"]}'
-        requests.delete(urllib.parse.urljoin(host.url, path), auth=(host.username, host.password), verify=host.verify)
+        retry_call(
+            requests.delete,
+            fargs=[urllib.parse.urljoin(host.url, path)],
+            fkwargs={"auth": (host.username, host.password), "verify": host.verify},
+            tries=4,
+            delay=2,
+            backoff=2,
+            logger=log,
+        )
+
+    log.info("Query complete!")
 
 
 def query_registry_db_or_mock(mock_f: Optional[Callable[[str], Iterable[Dict]]], mock_query_id: str):
@@ -201,16 +217,19 @@ def write_updated_docs(host: Host, ids_and_updates: Mapping[str, Dict], index_na
     for lidvid, update_content in ids_and_updates.items():
         if len(bulk_updates) >= bulk_update_chunk_threshold:
             log.info(
-                f"Bulk update chunk threshold reached ({bulk_update_chunk_threshold} statements, {bulk_update_products_threshold} products), writing chunk to db"
+                f"Bulk update chunk threshold reached ({bulk_update_chunk_threshold} statements, {bulk_update_products_threshold} products), writing chunk to db..."
             )
             _write_bulk_updates_chunk(host, index_name, bulk_updates)
             bulk_updates = []
         bulk_updates.append(json.dumps({"update": {"_id": lidvid}}))
         bulk_updates.append(json.dumps({"doc": update_content}))
 
+    remaining_products_to_write_count = int(len(bulk_updates) / 2)
+    log.info(f"Writing updates for {remaining_products_to_write_count} remaining products to db...")
     _write_bulk_updates_chunk(host, index_name, bulk_updates)
 
 
+@retry(exceptions=(HTTPError, RuntimeError), tries=4, delay=2, backoff=2, logger=log)
 def _write_bulk_updates_chunk(host: Host, index_name: str, bulk_updates: Iterable[str]):
     cross_cluster_indexes = [f"{node}:{index_name}" for node in host.cross_cluster_remotes]
     headers = {"Content-Type": "application/x-ndjson"}
@@ -229,11 +248,19 @@ def _write_bulk_updates_chunk(host: Host, index_name: str, bulk_updates: Iterabl
 
     response_content = response.json()
     if response_content.get("errors"):
-        for item in response_content["items"]:
-            if "error" in item:
-                log.error("update error (%d): %s", item["status"], str(item["error"]))
-    else:
-        log.info("Successfully wrote bulk updates chunk")
+        warn_types = {"document_missing_exception"}  # these types represent bad data, not bad sweepers behaviour
+        items_with_error = [item for item in response_content["items"] if "error" in item["update"]]
+        items_with_warnings = [item for item in items_with_error if item["update"]["error"]["type"] in warn_types]
+        items_with_errors = [item for item in items_with_error if item["update"]["error"]["type"] not in warn_types]
+
+        for item in items_with_warnings:
+            error_type = item["update"]["error"]["type"]
+            log.warning(f'Attempt to update document {item["update"]["_id"]} failed due to {error_type}')
+
+        for item in items_with_errors:
+            log.error(f'Attempt to update document {item["update"]["_id"]} unexpectedly failed: {item["error"]}')
+
+    log.info("Successfully wrote bulk updates chunk")
 
 
 def coerce_list_type(db_value: Any) -> List[Any]:
