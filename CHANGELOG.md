@@ -6,6 +6,7 @@
 
 **Defects:**
 
+- Properly resolve errors during db write operations [\#32](https://github.com/NASA-PDS/registry-sweepers/issues/32)
 - registry-sweepers breaks when run against production-scale data [\#28](https://github.com/NASA-PDS/registry-sweepers/issues/28)
 - Malformed product docs break ancestry sweeper [\#20](https://github.com/NASA-PDS/registry-sweepers/issues/20)
 - Bundle documents with string-like reference properties are not handled well [\#19](https://github.com/NASA-PDS/registry-sweepers/issues/19)
