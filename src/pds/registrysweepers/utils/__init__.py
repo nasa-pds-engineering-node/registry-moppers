@@ -3,6 +3,7 @@ import collections
 import functools
 import json
 import logging
+import sys
 import urllib.parse
 from argparse import Namespace
 from datetime import datetime
@@ -102,7 +103,7 @@ def query_registry_db(
     _source: Dict,
     index_name: str = "registry",
     page_size: int = 10000,
-    scroll_validity_duration_minutes: int = 10,
+    scroll_keepalive_minutes: int = 10,
 ) -> Iterable[Dict]:
     """
     Given an OpenSearch host and query/_source, return an iterable collection of hits
@@ -120,7 +121,7 @@ def query_registry_db(
     log.info(f"Initiating query: {req_content}")
 
     cross_cluster_indexes = [f"{node}:{index_name}" for node in host.cross_cluster_remotes]
-    path = ",".join([index_name] + cross_cluster_indexes) + f"/_search?scroll={scroll_validity_duration_minutes}m"
+    path = ",".join([index_name] + cross_cluster_indexes) + f"/_search?scroll={scroll_keepalive_minutes}m"
     served_hits = 0
 
     last_info_log_at_percentage = 0
@@ -141,7 +142,7 @@ def query_registry_db(
 
         data = resp.json()
         path = "_search/scroll"
-        req_content = {"scroll": f"{scroll_validity_duration_minutes}m", "scroll_id": data["_scroll_id"]}
+        req_content = {"scroll": f"{scroll_keepalive_minutes}m", "scroll_id": data["_scroll_id"]}
 
         total_hits = data["hits"]["total"]["value"]
         log.debug(f"   paging query ({served_hits} to {min(served_hits + page_size, total_hits)} of {total_hits})")
@@ -158,6 +159,7 @@ def query_registry_db(
 
         more_data_exists = served_hits < data["hits"]["total"]["value"]
 
+    # TODO: Determine if the following block is actually necessary
     if "scroll_id" in req_content:
         path = f'_search/scroll/{req_content["scroll_id"]}'
         retry_call(
@@ -201,7 +203,7 @@ def get_extant_lidvids(host: Host) -> Iterable[str]:
     query = {"bool": {"must": [{"terms": {"ops:Tracking_Meta/ops:archive_status": ["archived", "certified"]}}]}}
     _source = {"includes": ["lidvid"]}
 
-    results = query_registry_db(host, query, _source, scroll_validity_duration_minutes=1)
+    results = query_registry_db(host, query, _source, scroll_keepalive_minutes=1)
 
     return map(lambda doc: doc["_source"]["lidvid"], results)
 
@@ -210,24 +212,32 @@ def write_updated_docs(host: Host, ids_and_updates: Mapping[str, Dict], index_na
     """
     Given an OpenSearch host and a mapping of doc ids onto updates to those docs, write bulk updates to documents in db.
     """
-    log.info("Bulk update %d documents", len(ids_and_updates))
-    bulk_update_chunk_threshold = 10000  # threshold is statements count.  There are two products per statement
-    bulk_update_products_threshold = int(bulk_update_chunk_threshold / 2)
+    log.info(f"Updating documents for {len(ids_and_updates)} products...")
 
-    bulk_updates: List[str] = []
+    bulk_buffer_max_size_mb = 20.0
+    bulk_buffer_size_mb = 0.0
+    bulk_updates_buffer: List[str] = []
     for lidvid, update_content in ids_and_updates.items():
-        if len(bulk_updates) >= bulk_update_chunk_threshold:
+        if bulk_buffer_size_mb > bulk_buffer_max_size_mb:
+            pending_product_count = int(len(bulk_updates_buffer) / 2)
             log.info(
-                f"Bulk update chunk threshold reached ({bulk_update_chunk_threshold} statements, {bulk_update_products_threshold} products), writing chunk to db..."
+                f"Bulk update buffer has reached {bulk_buffer_max_size_mb}MB threshold - writing {pending_product_count} document updates to db..."
             )
-            _write_bulk_updates_chunk(host, index_name, bulk_updates)
-            bulk_updates = []
-        bulk_updates.append(json.dumps({"update": {"_id": lidvid}}))
-        bulk_updates.append(json.dumps({"doc": update_content}))
+            _write_bulk_updates_chunk(host, index_name, bulk_updates_buffer)
+            bulk_updates_buffer = []
+            bulk_buffer_size_mb = 0.0
 
-    remaining_products_to_write_count = int(len(bulk_updates) / 2)
-    log.info(f"Writing updates for {remaining_products_to_write_count} remaining products to db...")
-    _write_bulk_updates_chunk(host, index_name, bulk_updates)
+        update_objs = [{"update": {"_id": lidvid}}, {"doc": update_content}]
+        updates_strs = [json.dumps(obj) for obj in update_objs]
+
+        for s in updates_strs:
+            bulk_buffer_size_mb += sys.getsizeof(s) / 1024**2
+
+        bulk_updates_buffer.extend(updates_strs)
+
+    remaining_products_to_write_count = int(len(bulk_updates_buffer) / 2)
+    log.info(f"Writing documents updates for {remaining_products_to_write_count} remaining products to db...")
+    _write_bulk_updates_chunk(host, index_name, bulk_updates_buffer)
 
 
 @retry(exceptions=(HTTPError, RuntimeError), tries=4, delay=2, backoff=2, logger=log)
