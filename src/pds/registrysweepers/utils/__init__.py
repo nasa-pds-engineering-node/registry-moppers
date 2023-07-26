@@ -114,7 +114,7 @@ def query_registry_db(
     log.info(f"Initiating query: {req_content}")
 
     path = f"{index_name}/_search?scroll={scroll_keepalive_minutes}m"
-    
+
     served_hits = 0
 
     last_info_log_at_percentage = 0
