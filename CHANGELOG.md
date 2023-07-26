@@ -1,11 +1,12 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2023-07-25)
+## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2023-07-26)
 
 [Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/v1.0.0...«unknown»)
 
 **Defects:**
 
+- Fatal error upon unexpected error due to bad json path [\#37](https://github.com/NASA-PDS/registry-sweepers/issues/37)
 - Properly resolve errors during db write operations [\#32](https://github.com/NASA-PDS/registry-sweepers/issues/32)
 - registry-sweepers breaks when run against production-scale data [\#28](https://github.com/NASA-PDS/registry-sweepers/issues/28)
 - Malformed product docs break ancestry sweeper [\#20](https://github.com/NASA-PDS/registry-sweepers/issues/20)
