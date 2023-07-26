@@ -3,6 +3,7 @@ import collections
 import functools
 import json
 import logging
+import sys
 import urllib.parse
 from argparse import Namespace
 from datetime import datetime
@@ -70,7 +71,7 @@ def parse_log_level(input: str) -> int:
     try:
         result = int(input)
     except ValueError:
-        result = getattr(logging, input)
+        result = getattr(logging, input.upper())
     return result
 
 
@@ -95,7 +96,7 @@ def query_registry_db(
     _source: Dict,
     index_name: str = "registry",
     page_size: int = 10000,
-    scroll_validity_duration_minutes: int = 10,
+    scroll_keepalive_minutes: int = 10,
 ) -> Iterable[Dict]:
     """
     Given an OpenSearch host and query/_source, return an iterable collection of hits
@@ -112,8 +113,12 @@ def query_registry_db(
 
     log.info(f"Initiating query: {req_content}")
 
-    path = f"{index_name}/_search?scroll={scroll_validity_duration_minutes}m"
+    path = f"{index_name}/_search?scroll={scroll_keepalive_minutes}m"
+    
     served_hits = 0
+
+    last_info_log_at_percentage = 0
+    log.info("Query progress: 0%")
 
     more_data_exists = True
     while more_data_exists:
@@ -130,19 +135,16 @@ def query_registry_db(
 
         data = resp.json()
         path = "_search/scroll"
-        req_content = {"scroll": f"{scroll_validity_duration_minutes}m", "scroll_id": data["_scroll_id"]}
+        req_content = {"scroll": f"{scroll_keepalive_minutes}m", "scroll_id": data["_scroll_id"]}
 
         total_hits = data["hits"]["total"]["value"]
         log.debug(f"   paging query ({served_hits} to {min(served_hits + page_size, total_hits)} of {total_hits})")
-
-        last_info_log_at_percentage = 0
-        log.info("Query progress: 0%")
 
         for hit in data["hits"]["hits"]:
             served_hits += 1
 
             percentage_of_hits_served = int(served_hits / total_hits * 100)
-            if last_info_log_at_percentage is None or percentage_of_hits_served > (last_info_log_at_percentage + 5):
+            if last_info_log_at_percentage is None or percentage_of_hits_served >= (last_info_log_at_percentage + 5):
                 last_info_log_at_percentage = percentage_of_hits_served
                 log.info(f"Query progress: {percentage_of_hits_served}%")
 
@@ -150,6 +152,7 @@ def query_registry_db(
 
         more_data_exists = served_hits < data["hits"]["total"]["value"]
 
+    # TODO: Determine if the following block is actually necessary
     if "scroll_id" in req_content:
         path = f'_search/scroll/{req_content["scroll_id"]}'
         retry_call(
@@ -193,7 +196,7 @@ def get_extant_lidvids(host: Host) -> Iterable[str]:
     query = {"bool": {"must": [{"terms": {"ops:Tracking_Meta/ops:archive_status": ["archived", "certified"]}}]}}
     _source = {"includes": ["lidvid"]}
 
-    results = query_registry_db(host, query, _source, scroll_validity_duration_minutes=1)
+    results = query_registry_db(host, query, _source, scroll_keepalive_minutes=1)
 
     return map(lambda doc: doc["_source"]["lidvid"], results)
 
@@ -202,24 +205,32 @@ def write_updated_docs(host: Host, ids_and_updates: Mapping[str, Dict], index_na
     """
     Given an OpenSearch host and a mapping of doc ids onto updates to those docs, write bulk updates to documents in db.
     """
-    log.info("Bulk update %d documents", len(ids_and_updates))
-    bulk_update_chunk_threshold = 10000  # threshold is statements count.  There are two products per statement
-    bulk_update_products_threshold = int(bulk_update_chunk_threshold / 2)
+    log.info(f"Updating documents for {len(ids_and_updates)} products...")
 
-    bulk_updates: List[str] = []
+    bulk_buffer_max_size_mb = 20.0
+    bulk_buffer_size_mb = 0.0
+    bulk_updates_buffer: List[str] = []
     for lidvid, update_content in ids_and_updates.items():
-        if len(bulk_updates) >= bulk_update_chunk_threshold:
+        if bulk_buffer_size_mb > bulk_buffer_max_size_mb:
+            pending_product_count = int(len(bulk_updates_buffer) / 2)
             log.info(
-                f"Bulk update chunk threshold reached ({bulk_update_chunk_threshold} statements, {bulk_update_products_threshold} products), writing chunk to db..."
+                f"Bulk update buffer has reached {bulk_buffer_max_size_mb}MB threshold - writing {pending_product_count} document updates to db..."
             )
-            _write_bulk_updates_chunk(host, index_name, bulk_updates)
-            bulk_updates = []
-        bulk_updates.append(json.dumps({"update": {"_id": lidvid}}))
-        bulk_updates.append(json.dumps({"doc": update_content}))
+            _write_bulk_updates_chunk(host, index_name, bulk_updates_buffer)
+            bulk_updates_buffer = []
+            bulk_buffer_size_mb = 0.0
 
-    remaining_products_to_write_count = int(len(bulk_updates) / 2)
-    log.info(f"Writing updates for {remaining_products_to_write_count} remaining products to db...")
-    _write_bulk_updates_chunk(host, index_name, bulk_updates)
+        update_objs = [{"update": {"_id": lidvid}}, {"doc": update_content}]
+        updates_strs = [json.dumps(obj) for obj in update_objs]
+
+        for s in updates_strs:
+            bulk_buffer_size_mb += sys.getsizeof(s) / 1024**2
+
+        bulk_updates_buffer.extend(updates_strs)
+
+    remaining_products_to_write_count = int(len(bulk_updates_buffer) / 2)
+    log.info(f"Writing documents updates for {remaining_products_to_write_count} remaining products to db...")
+    _write_bulk_updates_chunk(host, index_name, bulk_updates_buffer)
 
 
 @retry(exceptions=(HTTPError, RuntimeError), tries=4, delay=2, backoff=2, logger=log)
@@ -236,25 +247,55 @@ def _write_bulk_updates_chunk(host: Host, index_name: str, bulk_updates: Iterabl
         headers=headers,
         verify=host.verify,
     )
-    response.raise_for_status()
 
+    # N.B. HTTP status 200 is insufficient as a success check for _bulk API.
+    # See: https://github.com/elastic/elasticsearch/issues/41434
+    response.raise_for_status()
     response_content = response.json()
     if response_content.get("errors"):
         warn_types = {"document_missing_exception"}  # these types represent bad data, not bad sweepers behaviour
-        items_with_error = [item for item in response_content["items"] if "error" in item["update"]]
-        items_with_warnings = [item for item in items_with_error if item["update"]["error"]["type"] in warn_types]
-        items_with_errors = [item for item in items_with_error if item["update"]["error"]["type"] not in warn_types]
+        items_with_problems = [item for item in response_content["items"] if "error" in item["update"]]
 
-        for item in items_with_warnings:
-            error_type = item["update"]["error"]["type"]
-            log.warning(f'Attempt to update document {item["update"]["_id"]} failed due to {error_type}')
+        if log.isEnabledFor(logging.WARNING):
+            items_with_warnings = [
+                item for item in items_with_problems if item["update"]["error"]["type"] in warn_types
+            ]
+            warning_aggregates = aggregate_update_error_types(items_with_warnings)
+            for error_type, reason_aggregate in warning_aggregates.items():
+                for error_reason, ids in reason_aggregate.items():
+                    log.warning(
+                        f"Attempt to update the following documents failed due to {error_type} ({error_reason}): {ids}"
+                    )
 
-        for item in items_with_errors:
-            log.error(
-                f'Attempt to update document {item["update"]["_id"]} unexpectedly failed: {item["update"]["error"]}'
-            )
+        if log.isEnabledFor(logging.ERROR):
+            items_with_errors = [
+                item for item in items_with_problems if item["update"]["error"]["type"] not in warn_types
+            ]
+            error_aggregates = aggregate_update_error_types(items_with_errors)
+            for error_type, reason_aggregate in error_aggregates.items():
+                for error_reason, ids in reason_aggregate.items():
+                    log.error(
+                        f"Attempt to update the following documents failed unexpectedly due to {error_type} ({error_reason}): {ids}"
+                    )
 
-    log.info("Successfully wrote bulk updates chunk")
+
+def aggregate_update_error_types(items: Iterable[Dict]) -> Mapping[str, Dict[str, List[str]]]:
+    """Return a nested aggregation of ids, aggregated first by error type, then by reason"""
+    agg: Dict[str, Dict[str, List[str]]] = {}
+    for item in items:
+        id = item["update"]["_id"]
+        error = item["update"]["error"]
+        error_type = error["type"]
+        error_reason = error["reason"]
+        if error_type not in agg:
+            agg[error_type] = {}
+
+        if error_reason not in agg[error_type]:
+            agg[error_type][error_reason] = []
+
+        agg[error_type][error_reason].append(id)
+
+    return agg
 
 
 def coerce_list_type(db_value: Any) -> List[Any]:
