@@ -20,7 +20,7 @@ import requests
 from retry import retry
 from retry.api import retry_call
 
-Host = collections.namedtuple("Host", ["cross_cluster_remotes", "password", "url", "username", "verify"])
+Host = collections.namedtuple("Host", ["password", "url", "username", "verify"])
 
 log = logging.getLogger(__name__)
 
@@ -36,13 +36,6 @@ def parse_args(description: str = "", epilog: str = "") -> Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     ap.add_argument("-b", "--base-URL", required=True, type=str)
-    ap.add_argument(
-        "-c",
-        "--ccs-remotes",
-        default=[],
-        nargs="*",
-        help="names of additional opensearch cross-cluster remotes, space-separated",
-    )
     ap.add_argument("-l", "--log-file", default=None, required=False, help="file to write the log messages")
     ap.add_argument(
         "-L",
@@ -119,8 +112,7 @@ def query_registry_db(
 
     log.info(f"Initiating query: {req_content}")
 
-    cross_cluster_indexes = [f"{node}:{index_name}" for node in host.cross_cluster_remotes]
-    path = ",".join([index_name] + cross_cluster_indexes) + f"/_search?scroll={scroll_validity_duration_minutes}m"
+    path = f"{index_name}/_search?scroll={scroll_validity_duration_minutes}m"
     served_hits = 0
 
     more_data_exists = True
@@ -232,9 +224,8 @@ def write_updated_docs(host: Host, ids_and_updates: Mapping[str, Dict], index_na
 
 @retry(exceptions=(HTTPError, RuntimeError), tries=4, delay=2, backoff=2, logger=log)
 def _write_bulk_updates_chunk(host: Host, index_name: str, bulk_updates: Iterable[str]):
-    cross_cluster_indexes = [f"{node}:{index_name}" for node in host.cross_cluster_remotes]
     headers = {"Content-Type": "application/x-ndjson"}
-    path = ",".join([index_name] + cross_cluster_indexes) + "/_bulk"
+    path = f"{index_name}/_bulk"
 
     bulk_data = "\n".join(bulk_updates) + "\n"
 

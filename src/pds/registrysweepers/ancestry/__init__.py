@@ -39,7 +39,7 @@ def run(
 
     log.info("Starting ancestry sweeper")
 
-    host = Host([], password, base_url, username, verify_host_certs)
+    host = Host(password, base_url, username, verify_host_certs)
 
     bundle_records = get_bundle_ancestry_records(host, registry_mock_query_f)
     collection_records = list(get_collection_ancestry_records(host, registry_mock_query_f))

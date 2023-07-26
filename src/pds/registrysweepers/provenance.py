@@ -70,7 +70,7 @@ def run(
 
     log.info("starting CLI processing")
 
-    host = Host([], password, base_url, username, verify_host_certs)
+    host = Host(password, base_url, username, verify_host_certs)
 
     extant_lidvids = get_extant_lidvids(host)
     successors = get_successors_by_lidvid(extant_lidvids)
