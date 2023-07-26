@@ -28,7 +28,6 @@ def run(
     base_url: str,
     username: str,
     password: str,
-    cross_cluster_remotes=None,
     verify_host_certs: bool = True,
     log_filepath: Union[str, None] = None,
     log_level: int = logging.INFO,
@@ -40,7 +39,7 @@ def run(
 
     log.info("Starting ancestry sweeper")
 
-    host = Host(cross_cluster_remotes or [], password, base_url, username, verify_host_certs)
+    host = Host([], password, base_url, username, verify_host_certs)
 
     bundle_records = get_bundle_ancestry_records(host, registry_mock_query_f)
     collection_records = list(get_collection_ancestry_records(host, registry_mock_query_f))
@@ -97,7 +96,6 @@ if __name__ == "__main__":
         base_url=args.base_URL,
         username=args.username,
         password=args.password,
-        cross_cluster_remotes=args.cluster_nodes,
         verify_host_certs=not args.insecure,
         log_level=args.log_level,
         log_filepath=args.log_file,
