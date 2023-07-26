@@ -77,7 +77,7 @@ def parse_log_level(input: str) -> int:
     try:
         result = int(input)
     except ValueError:
-        result = getattr(logging, input)
+        result = getattr(logging, input.upper())
     return result
 
 
@@ -123,6 +123,9 @@ def query_registry_db(
     path = ",".join([index_name] + cross_cluster_indexes) + f"/_search?scroll={scroll_validity_duration_minutes}m"
     served_hits = 0
 
+    last_info_log_at_percentage = 0
+    log.info("Query progress: 0%")
+
     more_data_exists = True
     while more_data_exists:
         resp = retry_call(
@@ -143,14 +146,11 @@ def query_registry_db(
         total_hits = data["hits"]["total"]["value"]
         log.debug(f"   paging query ({served_hits} to {min(served_hits + page_size, total_hits)} of {total_hits})")
 
-        last_info_log_at_percentage = 0
-        log.info("Query progress: 0%")
-
         for hit in data["hits"]["hits"]:
             served_hits += 1
 
             percentage_of_hits_served = int(served_hits / total_hits * 100)
-            if last_info_log_at_percentage is None or percentage_of_hits_served > (last_info_log_at_percentage + 5):
+            if last_info_log_at_percentage is None or percentage_of_hits_served >= (last_info_log_at_percentage + 5):
                 last_info_log_at_percentage = percentage_of_hits_served
                 log.info(f"Query progress: {percentage_of_hits_served}%")
 
@@ -245,25 +245,55 @@ def _write_bulk_updates_chunk(host: Host, index_name: str, bulk_updates: Iterabl
         headers=headers,
         verify=host.verify,
     )
-    response.raise_for_status()
 
+    # N.B. HTTP status 200 is insufficient as a success check for _bulk API.
+    # See: https://github.com/elastic/elasticsearch/issues/41434
+    response.raise_for_status()
     response_content = response.json()
     if response_content.get("errors"):
         warn_types = {"document_missing_exception"}  # these types represent bad data, not bad sweepers behaviour
-        items_with_error = [item for item in response_content["items"] if "error" in item["update"]]
-        items_with_warnings = [item for item in items_with_error if item["update"]["error"]["type"] in warn_types]
-        items_with_errors = [item for item in items_with_error if item["update"]["error"]["type"] not in warn_types]
+        items_with_problems = [item for item in response_content["items"] if "error" in item["update"]]
 
-        for item in items_with_warnings:
-            error_type = item["update"]["error"]["type"]
-            log.warning(f'Attempt to update document {item["update"]["_id"]} failed due to {error_type}')
+        if log.isEnabledFor(logging.WARNING):
+            items_with_warnings = [
+                item for item in items_with_problems if item["update"]["error"]["type"] in warn_types
+            ]
+            warning_aggregates = aggregate_update_error_types(items_with_warnings)
+            for error_type, reason_aggregate in warning_aggregates.items():
+                for error_reason, ids in reason_aggregate.items():
+                    log.warning(
+                        f"Attempt to update the following documents failed due to {error_type} ({error_reason}): {ids}"
+                    )
 
-        for item in items_with_errors:
-            log.error(
-                f'Attempt to update document {item["update"]["_id"]} unexpectedly failed: {item["update"]["error"]}'
-            )
+        if log.isEnabledFor(logging.ERROR):
+            items_with_errors = [
+                item for item in items_with_problems if item["update"]["error"]["type"] not in warn_types
+            ]
+            error_aggregates = aggregate_update_error_types(items_with_errors)
+            for error_type, reason_aggregate in error_aggregates.items():
+                for error_reason, ids in reason_aggregate.items():
+                    log.error(
+                        f"Attempt to update the following documents failed unexpectedly due to {error_type} ({error_reason}): {ids}"
+                    )
 
-    log.info("Successfully wrote bulk updates chunk")
+
+def aggregate_update_error_types(items: Iterable[Dict]) -> Mapping[str, Dict[str, List[str]]]:
+    """Return a nested aggregation of ids, aggregated first by error type, then by reason"""
+    agg: Dict[str, Dict[str, List[str]]] = {}
+    for item in items:
+        id = item["update"]["_id"]
+        error = item["update"]["error"]
+        error_type = error["type"]
+        error_reason = error["reason"]
+        if error_type not in agg:
+            agg[error_type] = {}
+
+        if error_reason not in agg[error_type]:
+            agg[error_type][error_reason] = []
+
+        agg[error_type][error_reason].append(id)
+
+    return agg
 
 
 def coerce_list_type(db_value: Any) -> List[Any]:
