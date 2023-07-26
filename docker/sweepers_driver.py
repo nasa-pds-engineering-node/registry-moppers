@@ -59,7 +59,7 @@ import json
 import logging
 import os
 from datetime import datetime
-from typing import Callable, Iterable
+from typing import Callable
 
 from pds.registrysweepers import provenance, ancestry
 from pds.registrysweepers.utils import configure_logging, get_human_readable_elapsed_since
@@ -77,7 +77,7 @@ if dev_mode:
 opensearch_endpoint = os.environ.get('PROV_ENDPOINT', '')
 if opensearch_endpoint.strip() == '':
     raise RuntimeError('Environment variable PROV_ENDPOINT must be provided')
-log.info(f'Targeting base OpenSearch endpoint "{opensearch_endpoint}"')
+log.info(f'Targeting OpenSearch endpoint "{opensearch_endpoint}"')
 
 try:
     provCredentialsStr = os.environ["PROV_CREDENTIALS"]
@@ -105,40 +105,13 @@ def run_factory(sweeper_f: Callable) -> Callable:
     )
 
 
-def parse_cross_cluster_remotes(env_var_value: str | None) -> Iterable[Iterable[str]] | None:
-    """
-    Given the env var value specifying the CCS remote node-sets, return the value as a list of batches, where each batch
-    is a list of remotes to be processed at the same time.  Returns None if the value is not set, empty, or specifies an
-    empty list of remotes.
-    """
-
-    if not env_var_value:
-        return None
-
-    content = json.loads(env_var_value)
-    if len(content) < 1:
-        return None
-
-    return [batch.split() for batch in content]
-
-
 run_provenance = run_factory(provenance.run)
 run_ancestry = run_factory(ancestry.run)
 
-cross_cluster_remote_node_batches = parse_cross_cluster_remotes(os.environ.get("PROV_REMOTES"))
 log.info('Running sweepers')
 execution_begin = datetime.now()
-if cross_cluster_remote_node_batches is None:
-    log.info('No CCS remotes specified - running sweepers against base OpenSearch endpoint only')
-    run_provenance()
-    run_ancestry()
-else:
-    log.info(f'CCS remotes specified: {json.dumps(cross_cluster_remote_node_batches)}')
-    for cross_cluster_remotes in cross_cluster_remote_node_batches:
-        targets_msg_str = f'base OpenSearch and the following remotes: {json.dumps(cross_cluster_remotes)}'
-        log.info(f'Running sweepers against {targets_msg_str}')
-        run_provenance(cross_cluster_remotes=cross_cluster_remotes)
-        run_ancestry(cross_cluster_remotes=cross_cluster_remotes)
-        log.info(f'Successfully ran sweepers against base OpenSearch and {targets_msg_str}')
+
+run_provenance()
+run_ancestry()
 
 log.info(f'Sweepers successfully executed in {get_human_readable_elapsed_since(execution_begin)}')
