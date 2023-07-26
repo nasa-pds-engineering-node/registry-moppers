@@ -103,7 +103,7 @@ def query_registry_db(
     _source: Dict,
     index_name: str = "registry",
     page_size: int = 10000,
-    scroll_validity_duration_minutes: int = 10,
+    scroll_keepalive_minutes: int = 10,
 ) -> Iterable[Dict]:
     """
     Given an OpenSearch host and query/_source, return an iterable collection of hits
@@ -121,7 +121,7 @@ def query_registry_db(
     log.info(f"Initiating query: {req_content}")
 
     cross_cluster_indexes = [f"{node}:{index_name}" for node in host.cross_cluster_remotes]
-    path = ",".join([index_name] + cross_cluster_indexes) + f"/_search?scroll={scroll_validity_duration_minutes}m"
+    path = ",".join([index_name] + cross_cluster_indexes) + f"/_search?scroll={scroll_keepalive_minutes}m"
     served_hits = 0
 
     more_data_exists = True
@@ -139,7 +139,7 @@ def query_registry_db(
 
         data = resp.json()
         path = "_search/scroll"
-        req_content = {"scroll": f"{scroll_validity_duration_minutes}m", "scroll_id": data["_scroll_id"]}
+        req_content = {"scroll": f"{scroll_keepalive_minutes}m", "scroll_id": data["_scroll_id"]}
 
         total_hits = data["hits"]["total"]["value"]
         log.debug(f"   paging query ({served_hits} to {min(served_hits + page_size, total_hits)} of {total_hits})")
@@ -159,6 +159,7 @@ def query_registry_db(
 
         more_data_exists = served_hits < data["hits"]["total"]["value"]
 
+    # TODO: Determine if the following block is actually necessary
     if "scroll_id" in req_content:
         path = f'_search/scroll/{req_content["scroll_id"]}'
         retry_call(
@@ -202,7 +203,7 @@ def get_extant_lidvids(host: Host) -> Iterable[str]:
     query = {"bool": {"must": [{"terms": {"ops:Tracking_Meta/ops:archive_status": ["archived", "certified"]}}]}}
     _source = {"includes": ["lidvid"]}
 
-    results = query_registry_db(host, query, _source, scroll_validity_duration_minutes=1)
+    results = query_registry_db(host, query, _source, scroll_keepalive_minutes=1)
 
     return map(lambda doc: doc["_source"]["lidvid"], results)
 
