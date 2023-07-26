@@ -259,7 +259,9 @@ def _write_bulk_updates_chunk(host: Host, index_name: str, bulk_updates: Iterabl
             log.warning(f'Attempt to update document {item["update"]["_id"]} failed due to {error_type}')
 
         for item in items_with_errors:
-            log.error(f'Attempt to update document {item["update"]["_id"]} unexpectedly failed: {item["error"]}')
+            log.error(
+                f'Attempt to update document {item["update"]["_id"]} unexpectedly failed: {item["update"]["error"]}'
+            )
 
     log.info("Successfully wrote bulk updates chunk")
 
