@@ -14,6 +14,7 @@
 
 **Other closed issues:**
 
+- Tweak \_bulk flush threshold [\#46](https://github.com/NASA-PDS/registry-sweepers/issues/46)
 - Consider suppress-data-warnings option [\#40](https://github.com/NASA-PDS/registry-sweepers/issues/40) [[s.high](https://github.com/NASA-PDS/registry-sweepers/labels/s.high)]
 - Review CCR behaviour [\#36](https://github.com/NASA-PDS/registry-sweepers/issues/36)
 - Catch empty remotes list and add logging to sweepers\_driver [\#21](https://github.com/NASA-PDS/registry-sweepers/issues/21)
