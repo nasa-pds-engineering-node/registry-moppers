@@ -39,16 +39,13 @@
 # It is important to note that the document is updated, not any dependent
 # index.
 #
-import json
 import logging
-import urllib.parse
 from typing import Dict
 from typing import Iterable
 from typing import List
 from typing import Mapping
 from typing import Union
 
-import requests
 from pds.registrysweepers.utils import _vid_as_tuple_of_int
 from pds.registrysweepers.utils import configure_logging
 from pds.registrysweepers.utils import get_extant_lidvids
@@ -65,7 +62,6 @@ def run(
     base_url: str,
     username: str,
     password: str,
-    cross_cluster_remotes=None,
     verify_host_certs: bool = True,
     log_filepath: Union[str, None] = None,
     log_level: int = logging.INFO,
@@ -74,7 +70,7 @@ def run(
 
     log.info("starting CLI processing")
 
-    host = Host(cross_cluster_remotes or [], password, base_url, username, verify_host_certs)
+    host = Host(password, base_url, username, verify_host_certs)
 
     extant_lidvids = get_extant_lidvids(host)
     successors = get_successors_by_lidvid(extant_lidvids)
@@ -138,9 +134,6 @@ if __name__ == "__main__":
 
       registrysweepers.py --help
 
-    - command for opensearch running in a cluster
-
-      registrysweepers.py -b https://search.us-west-2.es.amazonaws.com -c remote1 remote2 remote3 remote4 -u admin -p admin
     """
 
     args = parse_args(description=cli_description, epilog=cli_epilog)
@@ -149,7 +142,6 @@ if __name__ == "__main__":
         base_url=args.base_URL,
         username=args.username,
         password=args.password,
-        cross_cluster_remotes=args.cluster_nodes,
         verify_host_certs=not args.insecure,
         log_level=args.log_level,
         log_filepath=args.log_file,
