@@ -140,7 +140,8 @@ def query_registry_db(
         total_hits = data["hits"]["total"]["value"]
         log.debug(f"   paging query ({served_hits} to {min(served_hits + page_size, total_hits)} of {total_hits})")
 
-        for hit in data["hits"]["hits"]:
+        response_hits = data["hits"]["hits"]
+        for hit in response_hits:
             served_hits += 1
 
             percentage_of_hits_served = int(served_hits / total_hits * 100)
@@ -149,6 +150,17 @@ def query_registry_db(
                 log.info(f"Query progress: {percentage_of_hits_served}%")
 
             yield hit
+
+        # This is a temporary, ad-hoc guard against empty/erroneous responses which do not return non-200 status codes.
+        # Previously, this has cause infinite loops in production due to served_hits sticking and never reaching the
+        # expected total hits value.
+        # TODO: Remove this upon implementation of https://github.com/NASA-PDS/registry-sweepers/issues/42
+        hits_data_present_in_response = len(response_hits) > 0
+        if not hits_data_present_in_response:
+            log.error(
+                f"Response contained no hits when hits were expected.  Returned data is incomplete.  Response was: {data}"
+            )
+            break
 
         more_data_exists = served_hits < data["hits"]["total"]["value"]
 
