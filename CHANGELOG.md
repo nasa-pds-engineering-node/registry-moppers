@@ -7,6 +7,7 @@
 **Defects:**
 
 - Fatal error upon unexpected error due to bad json path [\#37](https://github.com/NASA-PDS/registry-sweepers/issues/37)
+- Provenance bulk update db writes fail under specific conditions related to presence of CCRs [\#34](https://github.com/NASA-PDS/registry-sweepers/issues/34) [[s.critical](https://github.com/NASA-PDS/registry-sweepers/labels/s.critical)]
 - Properly resolve errors during db write operations [\#32](https://github.com/NASA-PDS/registry-sweepers/issues/32)
 - registry-sweepers breaks when run against production-scale data [\#28](https://github.com/NASA-PDS/registry-sweepers/issues/28)
 - Malformed product docs break ancestry sweeper [\#20](https://github.com/NASA-PDS/registry-sweepers/issues/20)
@@ -15,6 +16,7 @@
 **Other closed issues:**
 
 - Tweak \_bulk flush threshold [\#46](https://github.com/NASA-PDS/registry-sweepers/issues/46)
+- Remove CCS support [\#43](https://github.com/NASA-PDS/registry-sweepers/issues/43)
 - Consider suppress-data-warnings option [\#40](https://github.com/NASA-PDS/registry-sweepers/issues/40) [[s.high](https://github.com/NASA-PDS/registry-sweepers/labels/s.high)]
 - Review CCR behaviour [\#36](https://github.com/NASA-PDS/registry-sweepers/issues/36)
 - Catch empty remotes list and add logging to sweepers\_driver [\#21](https://github.com/NASA-PDS/registry-sweepers/issues/21)
