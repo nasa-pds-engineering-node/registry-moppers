@@ -214,7 +214,7 @@ def write_updated_docs(host: Host, ids_and_updates: Mapping[str, Dict], index_na
     """
     log.info(f"Updating documents for {len(ids_and_updates)} products...")
 
-    bulk_buffer_max_size_mb = 20.0
+    bulk_buffer_max_size_mb = 30.0
     bulk_buffer_size_mb = 0.0
     bulk_updates_buffer: List[str] = []
     for lidvid, update_content in ids_and_updates.items():
