@@ -1,8 +1,6 @@
 '''change single strings to array of strings'''
-
-from typing import Dict
-
 import logging
+from typing import Dict
 
 log = logging.getLogger(__name__)
 

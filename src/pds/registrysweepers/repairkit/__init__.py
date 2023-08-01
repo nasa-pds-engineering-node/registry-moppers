@@ -5,17 +5,16 @@ are needed in the future. They can be added by updating the REPAIR_TOOLS mapping
 with the new field name and functional requirements. All the additions can then
 be modules with this executable package.
 '''
-
-from . import allarrays
-
-from pds.registrysweepers.utils import Host
-from pds.registrysweepers.utils import configure_logging
-from pds.registrysweepers.utils import query_registry_db
-from pds.registrysweepers.utils import write_updated_docs
-
 import logging
 import re
 from typing import Union
+
+from pds.registrysweepers.utils import configure_logging
+from pds.registrysweepers.utils import Host
+from pds.registrysweepers.utils import query_registry_db
+from pds.registrysweepers.utils import write_updated_docs
+
+from . import allarrays
 
 '''
 dictionary repair tools is {field_name:[funcs]} where field_name can be:
