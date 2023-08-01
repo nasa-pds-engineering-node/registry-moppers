@@ -52,9 +52,9 @@ def run(base_url:str,
     configure_logging(filepath=log_filepath, log_level=log_level)
     log.info("starting CLI processing")
     host = Host(password, base_url, username, verify_host_certs)
+    query = {"match_all":{}}
     for document in query_registry_db(host, query, {}):
         for fieldname,data in document.items():
-            repairs
             for regex,funcs in REPAIR_TOOLS:
                 if regex(filename):
                     repairs.update(func(document, fieldname) for func in funcs)
