@@ -11,7 +11,7 @@ from . import allarrays
 from pds.registrysweepers.utils import Host
 from pds.registrysweepers.utils import configure_logging
 from pds.registrysweepers.utils import query_registry_db
-from pds.registrysweepers.utils import write_update_docs
+from pds.registrysweepers.utils import write_updated_docs
 
 import logging
 import re
@@ -50,8 +50,8 @@ def run(base_url: str,
         username: str,
         password: str,
         verify_host_certs: bool = True,
-        log_filepath: Union[str,None] = None,
-        log_level: int=logging.INFO):
+        log_filepath: Union[str, None] = None,
+        log_level: int = logging.INFO):
     configure_logging(filepath=log_filepath, log_level=log_level)
     log.info("starting CLI processing")
     host = Host(password, base_url, username, verify_host_certs)
@@ -60,12 +60,13 @@ def run(base_url: str,
         id = document['_id']
         src = document['_source']
         repairs = {}
-        log.debug (f'working on document: {id}')
-        for fieldname,data in src.items():
-            for regex,funcs in REPAIR_TOOLS.items():
+        log.debug(f'working on document: {id}')
+        for fieldname, data in src.items():
+            for regex, funcs in REPAIR_TOOLS.items():
                 if regex(fieldname):
-                    for func in funcs: repairs.update(func(src, fieldname))
+                    for func in funcs:
+                        repairs.update(func(src, fieldname))
         if repairs:
             log.info(f'Writing repairs to document: {id}')
-            write_update_docs(host, {id:repairs})
+            write_updated_docs(host, {id:repairs})
     return
