@@ -2,6 +2,7 @@ import unittest
 
 from pds.registrysweepers.repairkit import allarrays
 
+
 class AllArrays(unittest.TestCase):
     def test_valid_field(self):
         src = {'apple': ['orange']} 
@@ -14,4 +15,4 @@ class AllArrays(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.test()
+    unittest.main()
