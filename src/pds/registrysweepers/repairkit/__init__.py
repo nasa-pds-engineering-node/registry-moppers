@@ -56,11 +56,14 @@ def run(base_url:str,
     host = Host(password, base_url, username, verify_host_certs)
     query = {"match_all":{}}
     for document in query_registry_db(host, query, {}):
+        id = document['_id']
+        src = document['_source']
         repairs = {}
-        for fieldname,data in document.items():
+        log.debug (f'working on document: {id}')
+        for fieldname,data in src.items():
             for regex,funcs in REPAIR_TOOLS.items():
-                if regex(filename):
-                    repairs.update(func(document, fieldname) for func in funcs)
+                if regex(fieldname):
+                    for func in funcs: repairs.update(func(src, fieldname))
         if repairs:
             log.info(f'Writing repairs to document: {id}')
             write_update_docs(host, {id:repairs})
