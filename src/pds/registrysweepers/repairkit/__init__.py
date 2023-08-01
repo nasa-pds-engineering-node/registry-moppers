@@ -68,5 +68,5 @@ def run(base_url: str,
                         repairs.update(func(src, fieldname))
         if repairs:
             log.info(f'Writing repairs to document: {id}')
-            write_updated_docs(host, {id:repairs})
+            write_updated_docs(host, {id: repairs})
     return
