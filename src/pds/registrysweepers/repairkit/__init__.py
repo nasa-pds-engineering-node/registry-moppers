@@ -11,6 +11,7 @@ from . import allarrays
 from pds.registrysweepers.utils import Host
 from pds.registrysweepers.utils import configure_logging
 from pds.registrysweepers.utils import query_registry_db
+from pds.registrysweepers.utils import write_update_docs
 
 import logging
 import re
@@ -45,16 +46,16 @@ re.compile('^ops:Label_File_Info/').match: [allarrays.repair],
 log = logging.getLogger(__name__)
 
 
-def run(base_url:str,
-        username:str,
-        password:str,
-        verify_host_certs:bool = True,
-        log_filepath:Union[str,None] = None,
-        log_level:int=logging.INFO):
+def run(base_url: str,
+        username: str,
+        password: str,
+        verify_host_certs: bool = True,
+        log_filepath: Union[str,None] = None,
+        log_level: int=logging.INFO):
     configure_logging(filepath=log_filepath, log_level=log_level)
     log.info("starting CLI processing")
     host = Host(password, base_url, username, verify_host_certs)
-    query = {"match_all":{}}
+    query = {"match_all": {}}
     for document in query_registry_db(host, query, {}):
         id = document['_id']
         src = document['_source']
