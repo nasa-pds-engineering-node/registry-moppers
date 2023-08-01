@@ -54,8 +54,7 @@ def run(base_url: str,
     configure_logging(filepath=log_filepath, log_level=log_level)
     log.info("starting CLI processing")
     host = Host(password, base_url, username, verify_host_certs)
-    query = {"match_all": {}}
-    for document in query_registry_db(host, query, {}):
+    for document in query_registry_db(host, {"match_all": {}}, {}):
         id = document['_id']
         src = document['_source']
         repairs = {}
