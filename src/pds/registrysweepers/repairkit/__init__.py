@@ -54,6 +54,7 @@ def run(base_url:str,
     host = Host(password, base_url, username, verify_host_certs)
     query = {"match_all":{}}
     for document in query_registry_db(host, query, {}):
+        repairs = {}
         for fieldname,data in document.items():
             for regex,funcs in REPAIR_TOOLS:
                 if regex(filename):
