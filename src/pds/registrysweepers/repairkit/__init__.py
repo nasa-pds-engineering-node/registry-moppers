@@ -39,8 +39,8 @@ To get str_a == str_b, re.compile(str_a).fullmatch
 '''
 
 REPAIR_TOOLS = {
-re.compile('^ops:Data_File_Info/').match: [allarrays.repair],
-re.compile('^ops:Label_File_Info/').match: [allarrays.repair],
+    re.compile('^ops:Data_File_Info/').match: [allarrays.repair],
+    re.compile('^ops:Label_File_Info/').match: [allarrays.repair],
 }
 
 log = logging.getLogger(__name__)
