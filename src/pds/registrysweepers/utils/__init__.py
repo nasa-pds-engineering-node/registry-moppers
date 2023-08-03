@@ -15,9 +15,9 @@ from typing import List
 from typing import Mapping
 from typing import Optional
 from typing import Union
-from urllib.error import HTTPError
 
 import requests
+from requests.exceptions import HTTPError
 from retry import retry
 from retry.api import retry_call
 
