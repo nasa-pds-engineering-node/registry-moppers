@@ -15,9 +15,9 @@ from typing import List
 from typing import Mapping
 from typing import Optional
 from typing import Union
-from urllib.error import HTTPError
 
 import requests
+from requests.exceptions import HTTPError
 from retry import retry
 from retry.api import retry_call
 
@@ -126,7 +126,7 @@ def query_registry_db(
             requests.get,
             fargs=[urllib.parse.urljoin(host.url, path)],
             fkwargs={"auth": (host.username, host.password), "verify": host.verify, "json": req_content},
-            tries=4,
+            tries=6,
             delay=2,
             backoff=2,
             logger=log,
@@ -171,7 +171,7 @@ def query_registry_db(
             requests.delete,
             fargs=[urllib.parse.urljoin(host.url, path)],
             fkwargs={"auth": (host.username, host.password), "verify": host.verify},
-            tries=4,
+            tries=6,
             delay=2,
             backoff=2,
             logger=log,
@@ -245,7 +245,7 @@ def write_updated_docs(host: Host, ids_and_updates: Mapping[str, Dict], index_na
     _write_bulk_updates_chunk(host, index_name, bulk_updates_buffer)
 
 
-@retry(exceptions=(HTTPError, RuntimeError), tries=4, delay=2, backoff=2, logger=log)
+@retry(exceptions=(HTTPError, RuntimeError), tries=6, delay=2, backoff=2, logger=log)
 def _write_bulk_updates_chunk(host: Host, index_name: str, bulk_updates: Iterable[str]):
     headers = {"Content-Type": "application/x-ndjson"}
     path = f"{index_name}/_bulk"
