@@ -61,7 +61,7 @@ import os
 from datetime import datetime
 from typing import Callable
 
-from pds.registrysweepers import provenance, ancestry
+from pds.registrysweepers import provenance, ancestry, repairkit
 from pds.registrysweepers.utils import configure_logging, get_human_readable_elapsed_since, parse_log_level
 
 configure_logging(filepath=None, log_level=logging.INFO)
@@ -108,10 +108,12 @@ def run_factory(sweeper_f: Callable) -> Callable:
 
 run_provenance = run_factory(provenance.run)
 run_ancestry = run_factory(ancestry.run)
+run_repairkit = run_factory(repairkit.run)
 
 log.info('Running sweepers')
 execution_begin = datetime.now()
 
+run_repairkit()
 run_provenance()
 run_ancestry()
 
