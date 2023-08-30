@@ -1,6 +1,6 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2023-08-16)
+## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2023-08-30)
 
 [Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/v1.0.0...«unknown»)
 
@@ -21,6 +21,7 @@
 - Remove CCS support [\#43](https://github.com/NASA-PDS/registry-sweepers/issues/43)
 - Consider suppress-data-warnings option [\#40](https://github.com/NASA-PDS/registry-sweepers/issues/40) [[s.high](https://github.com/NASA-PDS/registry-sweepers/labels/s.high)]
 - Review CCR behaviour [\#36](https://github.com/NASA-PDS/registry-sweepers/issues/36)
+- Configure monitoring for Registry Sweeper ECS cluster [\#30](https://github.com/NASA-PDS/registry-sweepers/issues/30)
 - Catch empty remotes list and add logging to sweepers\_driver [\#21](https://github.com/NASA-PDS/registry-sweepers/issues/21)
 - Prepare the deployment of the registry-sweeper on AWS \(stage\) [\#16](https://github.com/NASA-PDS/registry-sweepers/issues/16)
 - Implement ancestry [\#14](https://github.com/NASA-PDS/registry-sweepers/issues/14)
