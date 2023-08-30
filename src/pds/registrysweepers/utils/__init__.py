@@ -17,6 +17,7 @@ from typing import Optional
 from typing import Union
 
 import requests
+from pds.registrysweepers.utils.db.update import Update
 from requests.exceptions import HTTPError
 from retry import retry
 from retry.api import retry_call
@@ -211,6 +212,47 @@ def get_extant_lidvids(host: Host) -> Iterable[str]:
     results = query_registry_db(host, query, _source, scroll_keepalive_minutes=1)
 
     return map(lambda doc: doc["_source"]["lidvid"], results)
+
+
+def write_updated_docs(host: Host, updates: Iterable[Update], index_name: str = "registry"):
+    log.info("Updating a lazily-generated collection of product documents...")
+    updated_doc_count = 0
+
+    bulk_buffer_max_size_mb = 30.0
+    bulk_buffer_size_mb = 0.0
+    bulk_updates_buffer: List[str] = []
+    for update in updates:
+        if bulk_buffer_size_mb > bulk_buffer_max_size_mb:
+            pending_product_count = int(len(bulk_updates_buffer) / 2)
+            log.info(
+                f"Bulk update buffer has reached {bulk_buffer_max_size_mb}MB threshold - writing {pending_product_count} document updates to db..."
+            )
+            _write_bulk_updates_chunk(host, index_name, bulk_updates_buffer)
+            bulk_updates_buffer = []
+            bulk_buffer_size_mb = 0.0
+
+        update_statement_strs = update_as_statements(update)
+
+        for s in update_statement_strs:
+            bulk_buffer_size_mb += sys.getsizeof(s) / 1024**2
+
+        bulk_updates_buffer.extend(update_statement_strs)
+        updated_doc_count += 1
+
+    remaining_products_to_write_count = int(len(bulk_updates_buffer) / 2)
+    updated_doc_count += remaining_products_to_write_count
+
+    log.info(f"Writing documents updates for {remaining_products_to_write_count} remaining products to db...")
+    _write_bulk_updates_chunk(host, index_name, bulk_updates_buffer)
+
+    log.info(f"Updated documents for {updated_doc_count} total products!")
+
+
+def update_as_statements(update: Update) -> Iterable[str]:
+    """Given an Update, convert it to an ElasticSearch-style set of request body content strings"""
+    update_objs = [{"update": {"_id": update.id}}, {"doc": update.content}]
+    updates_strs = [json.dumps(obj) for obj in update_objs]
+    return updates_strs
 
 
 def write_updated_docs_legacy(host: Host, ids_and_updates: Mapping[str, Dict], index_name: str = "registry"):
