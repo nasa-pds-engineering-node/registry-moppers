@@ -7,12 +7,15 @@ be modules with this executable package.
 """
 import logging
 import re
+from typing import Dict
+from typing import Iterable
 from typing import Union
 
 from pds.registrysweepers.utils import configure_logging
 from pds.registrysweepers.utils import Host
 from pds.registrysweepers.utils import query_registry_db
-from pds.registrysweepers.utils import write_updated_docs_legacy
+from pds.registrysweepers.utils import Update
+from pds.registrysweepers.utils import write_updated_docs
 
 from . import allarrays
 
@@ -45,6 +48,24 @@ REPAIR_TOOLS = {
 log = logging.getLogger(__name__)
 
 
+def generate_updates(docs: Iterable[Dict]) -> Iterable[Update]:
+    """Lazily generate necessary Update objects for a collection of db documents"""
+    for document in docs:
+        id = document["_id"]
+        src = document["_source"]
+        repairs = {}
+        log.debug(f"applying repairkit sweeper to document: {id}")
+        for fieldname, data in src.items():
+            for regex, funcs in REPAIR_TOOLS.items():
+                if regex(fieldname):
+                    for func in funcs:
+                        repairs.update(func(src, fieldname))
+
+        if repairs:
+            log.info(f"Writing repairs to document: {id}")
+            yield Update(id=id, content=repairs)
+
+
 def run(
     base_url: str,
     username: str,
@@ -54,19 +75,11 @@ def run(
     log_level: int = logging.INFO,
 ):
     configure_logging(filepath=log_filepath, log_level=log_level)
-    log.info("starting CLI processing")
+    log.info("Starting repairkit sweeper processing...")
     host = Host(password, base_url, username, verify_host_certs)
-    for document in query_registry_db(host, {"match_all": {}}, {}):
-        id = document["_id"]
-        src = document["_source"]
-        repairs = {}
-        log.debug(f"working on document: {id}")
-        for fieldname, data in src.items():
-            for regex, funcs in REPAIR_TOOLS.items():
-                if regex(fieldname):
-                    for func in funcs:
-                        repairs.update(func(src, fieldname))
-        if repairs:
-            log.info(f"Writing repairs to document: {id}")
-            write_updated_docs_legacy(host, {id: repairs})
-    return
+
+    all_docs = query_registry_db(host, {"match_all": {}}, {})
+    updates = generate_updates(all_docs)
+    write_updated_docs(host, updates)
+
+    log.info("Repairkit sweeper processing complete!")
