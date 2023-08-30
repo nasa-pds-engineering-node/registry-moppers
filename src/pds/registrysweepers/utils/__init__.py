@@ -3,6 +3,7 @@ import collections
 import functools
 import json
 import logging
+import random
 import sys
 import urllib.parse
 from argparse import Namespace
@@ -17,6 +18,7 @@ from typing import Optional
 from typing import Union
 
 import requests
+from pds.registrysweepers.utils.db.update import Update
 from requests.exceptions import HTTPError
 from retry import retry
 from retry.api import retry_call
@@ -111,14 +113,15 @@ def query_registry_db(
         "size": page_size,
     }
 
-    log.info(f"Initiating query: {req_content}")
+    query_id = get_random_hex_id()  # This is just used to differentiate queries during logging
+    log.info(f"Initiating query with id {query_id}: {req_content}")
 
     path = f"{index_name}/_search?scroll={scroll_keepalive_minutes}m"
 
     served_hits = 0
 
     last_info_log_at_percentage = 0
-    log.info("Query progress: 0%")
+    log.info(f"Query {query_id} progress: 0%")
 
     more_data_exists = True
     while more_data_exists:
@@ -138,7 +141,9 @@ def query_registry_db(
         req_content = {"scroll": f"{scroll_keepalive_minutes}m", "scroll_id": data["_scroll_id"]}
 
         total_hits = data["hits"]["total"]["value"]
-        log.debug(f"   paging query ({served_hits} to {min(served_hits + page_size, total_hits)} of {total_hits})")
+        log.debug(
+            f"   paging query {query_id} ({served_hits} to {min(served_hits + page_size, total_hits)} of {total_hits})"
+        )
 
         response_hits = data["hits"]["hits"]
         for hit in response_hits:
@@ -147,7 +152,7 @@ def query_registry_db(
             percentage_of_hits_served = int(served_hits / total_hits * 100)
             if last_info_log_at_percentage is None or percentage_of_hits_served >= (last_info_log_at_percentage + 5):
                 last_info_log_at_percentage = percentage_of_hits_served
-                log.info(f"Query progress: {percentage_of_hits_served}%")
+                log.info(f"Query {query_id} progress: {percentage_of_hits_served}%")
 
             yield hit
 
@@ -158,7 +163,7 @@ def query_registry_db(
         hits_data_present_in_response = len(response_hits) > 0
         if not hits_data_present_in_response:
             log.error(
-                f"Response contained no hits when hits were expected.  Returned data is incomplete.  Response was: {data}"
+                f"Response for query {query_id} contained no hits when hits were expected.  Returned data is incomplete.  Response was: {data}"
             )
             break
 
@@ -177,7 +182,7 @@ def query_registry_db(
             logger=log,
         )
 
-    log.info("Query complete!")
+    log.info(f"Query {query_id} complete!")
 
 
 def query_registry_db_or_mock(mock_f: Optional[Callable[[str], Iterable[Dict]]], mock_query_id: str):
@@ -213,16 +218,14 @@ def get_extant_lidvids(host: Host) -> Iterable[str]:
     return map(lambda doc: doc["_source"]["lidvid"], results)
 
 
-def write_updated_docs(host: Host, ids_and_updates: Mapping[str, Dict], index_name: str = "registry"):
-    """
-    Given an OpenSearch host and a mapping of doc ids onto updates to those docs, write bulk updates to documents in db.
-    """
-    log.info(f"Updating documents for {len(ids_and_updates)} products...")
+def write_updated_docs(host: Host, updates: Iterable[Update], index_name: str = "registry"):
+    log.info("Updating a lazily-generated collection of product documents...")
+    updated_doc_count = 0
 
     bulk_buffer_max_size_mb = 30.0
     bulk_buffer_size_mb = 0.0
     bulk_updates_buffer: List[str] = []
-    for lidvid, update_content in ids_and_updates.items():
+    for update in updates:
         if bulk_buffer_size_mb > bulk_buffer_max_size_mb:
             pending_product_count = int(len(bulk_updates_buffer) / 2)
             log.info(
@@ -232,17 +235,28 @@ def write_updated_docs(host: Host, ids_and_updates: Mapping[str, Dict], index_na
             bulk_updates_buffer = []
             bulk_buffer_size_mb = 0.0
 
-        update_objs = [{"update": {"_id": lidvid}}, {"doc": update_content}]
-        updates_strs = [json.dumps(obj) for obj in update_objs]
+        update_statement_strs = update_as_statements(update)
 
-        for s in updates_strs:
+        for s in update_statement_strs:
             bulk_buffer_size_mb += sys.getsizeof(s) / 1024**2
 
-        bulk_updates_buffer.extend(updates_strs)
+        bulk_updates_buffer.extend(update_statement_strs)
+        updated_doc_count += 1
 
     remaining_products_to_write_count = int(len(bulk_updates_buffer) / 2)
+    updated_doc_count += remaining_products_to_write_count
+
     log.info(f"Writing documents updates for {remaining_products_to_write_count} remaining products to db...")
     _write_bulk_updates_chunk(host, index_name, bulk_updates_buffer)
+
+    log.info(f"Updated documents for {updated_doc_count} total products!")
+
+
+def update_as_statements(update: Update) -> Iterable[str]:
+    """Given an Update, convert it to an ElasticSearch-style set of request body content strings"""
+    update_objs = [{"update": {"_id": update.id}}, {"doc": update.content}]
+    updates_strs = [json.dumps(obj) for obj in update_objs]
+    return updates_strs
 
 
 @retry(exceptions=(HTTPError, RuntimeError), tries=6, delay=2, backoff=2, logger=log)
@@ -332,3 +346,8 @@ def get_human_readable_elapsed_since(begin: datetime) -> str:
     m = int(elapsed_seconds % 3600 / 60)
     s = int(elapsed_seconds % 60)
     return (f"{h}h" if h else "") + (f"{m}m" if m else "") + f"{s}s"
+
+
+def get_random_hex_id(id_len: int = 6) -> str:
+    val = random.randint(0, 16**id_len)
+    return hex(val)[2:]
