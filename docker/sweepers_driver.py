@@ -55,6 +55,7 @@
 #
 
 import functools
+import inspect
 import json
 import logging
 import os
@@ -94,6 +95,7 @@ except Exception as err:
 
 log_level = parse_log_level(os.environ.get('LOGLEVEL', 'INFO'))
 
+
 def run_factory(sweeper_f: Callable) -> Callable:
     return functools.partial(
         sweeper_f,
@@ -106,15 +108,20 @@ def run_factory(sweeper_f: Callable) -> Callable:
     )
 
 
-run_provenance = run_factory(provenance.run)
-run_ancestry = run_factory(ancestry.run)
-run_repairkit = run_factory(repairkit.run)
+# Define sweepers to be run here, in order of execution
+sweepers = [
+    repairkit.run,
+    provenance.run,
+    ancestry.run
+]
 
-log.info('Running sweepers')
+sweeper_descriptions = [inspect.getmodule(f).__name__ for f in sweepers]
+log.info(f'Running sweepers: {sweeper_descriptions}')
+
 execution_begin = datetime.now()
 
-run_repairkit()
-run_provenance()
-run_ancestry()
+for sweeper in sweepers:
+    run_sweeper_f = run_factory(sweeper)
+    run_sweeper_f()
 
 log.info(f'Sweepers successfully executed in {get_human_readable_elapsed_since(execution_begin)}')
