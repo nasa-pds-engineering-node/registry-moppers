@@ -260,32 +260,12 @@ def write_updated_docs_legacy(host: Host, ids_and_updates: Mapping[str, Dict], i
     """
     Given an OpenSearch host and a mapping of doc ids onto updates to those docs, write bulk updates to documents in db.
     """
-    log.info(f"Updating documents for {len(ids_and_updates)} products...")
+    log.warning(
+        "Use of write_updated_docs_legacy() is deprecated and should be updated to use new implementation of write_updated_docs()"
+    )
 
-    bulk_buffer_max_size_mb = 30.0
-    bulk_buffer_size_mb = 0.0
-    bulk_updates_buffer: List[str] = []
-    for lidvid, update_content in ids_and_updates.items():
-        if bulk_buffer_size_mb > bulk_buffer_max_size_mb:
-            pending_product_count = int(len(bulk_updates_buffer) / 2)
-            log.info(
-                f"Bulk update buffer has reached {bulk_buffer_max_size_mb}MB threshold - writing {pending_product_count} document updates to db..."
-            )
-            _write_bulk_updates_chunk(host, index_name, bulk_updates_buffer)
-            bulk_updates_buffer = []
-            bulk_buffer_size_mb = 0.0
-
-        update_objs = [{"update": {"_id": lidvid}}, {"doc": update_content}]
-        updates_strs = [json.dumps(obj) for obj in update_objs]
-
-        for s in updates_strs:
-            bulk_buffer_size_mb += sys.getsizeof(s) / 1024**2
-
-        bulk_updates_buffer.extend(updates_strs)
-
-    remaining_products_to_write_count = int(len(bulk_updates_buffer) / 2)
-    log.info(f"Writing documents updates for {remaining_products_to_write_count} remaining products to db...")
-    _write_bulk_updates_chunk(host, index_name, bulk_updates_buffer)
+    updates = [Update(id=lidvid, content=update_content) for lidvid, update_content in ids_and_updates.items()]
+    write_updated_docs(host, updates, index_name)
 
 
 @retry(exceptions=(HTTPError, RuntimeError), tries=6, delay=2, backoff=2, logger=log)
