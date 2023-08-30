@@ -3,6 +3,7 @@ import collections
 import functools
 import json
 import logging
+import random
 import sys
 import urllib.parse
 from argparse import Namespace
@@ -112,14 +113,15 @@ def query_registry_db(
         "size": page_size,
     }
 
-    log.info(f"Initiating query: {req_content}")
+    query_id = get_random_hex_id()  # This is just used to differentiate queries during logging
+    log.info(f"Initiating query with id {query_id}: {req_content}")
 
     path = f"{index_name}/_search?scroll={scroll_keepalive_minutes}m"
 
     served_hits = 0
 
     last_info_log_at_percentage = 0
-    log.info("Query progress: 0%")
+    log.info(f"Query {query_id} progress: 0%")
 
     more_data_exists = True
     while more_data_exists:
@@ -139,7 +141,9 @@ def query_registry_db(
         req_content = {"scroll": f"{scroll_keepalive_minutes}m", "scroll_id": data["_scroll_id"]}
 
         total_hits = data["hits"]["total"]["value"]
-        log.debug(f"   paging query ({served_hits} to {min(served_hits + page_size, total_hits)} of {total_hits})")
+        log.debug(
+            f"   paging query {query_id} ({served_hits} to {min(served_hits + page_size, total_hits)} of {total_hits})"
+        )
 
         response_hits = data["hits"]["hits"]
         for hit in response_hits:
@@ -148,7 +152,7 @@ def query_registry_db(
             percentage_of_hits_served = int(served_hits / total_hits * 100)
             if last_info_log_at_percentage is None or percentage_of_hits_served >= (last_info_log_at_percentage + 5):
                 last_info_log_at_percentage = percentage_of_hits_served
-                log.info(f"Query progress: {percentage_of_hits_served}%")
+                log.info(f"Query {query_id} progress: {percentage_of_hits_served}%")
 
             yield hit
 
@@ -159,7 +163,7 @@ def query_registry_db(
         hits_data_present_in_response = len(response_hits) > 0
         if not hits_data_present_in_response:
             log.error(
-                f"Response contained no hits when hits were expected.  Returned data is incomplete.  Response was: {data}"
+                f"Response for query {query_id} contained no hits when hits were expected.  Returned data is incomplete.  Response was: {data}"
             )
             break
 
@@ -178,7 +182,7 @@ def query_registry_db(
             logger=log,
         )
 
-    log.info("Query complete!")
+    log.info(f"Query {query_id} complete!")
 
 
 def query_registry_db_or_mock(mock_f: Optional[Callable[[str], Iterable[Dict]]], mock_query_id: str):
@@ -355,3 +359,8 @@ def get_human_readable_elapsed_since(begin: datetime) -> str:
     m = int(elapsed_seconds % 3600 / 60)
     s = int(elapsed_seconds % 60)
     return (f"{h}h" if h else "") + (f"{m}m" if m else "") + f"{s}s"
+
+
+def get_random_hex_id(id_len: int = 6) -> str:
+    val = random.randint(0, 16**id_len)
+    return hex(val)[2:]
