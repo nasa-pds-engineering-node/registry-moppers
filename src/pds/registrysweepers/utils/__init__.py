@@ -259,19 +259,6 @@ def update_as_statements(update: Update) -> Iterable[str]:
     return updates_strs
 
 
-def write_updated_docs_legacy(host: Host, ids_and_updates: Mapping[str, Dict], index_name: str = "registry"):
-    # TODO: switch over calls to this function to new write_updated_docs() and remove this implementation
-    """
-    Given an OpenSearch host and a mapping of doc ids onto updates to those docs, write bulk updates to documents in db.
-    """
-    log.warning(
-        "Use of write_updated_docs_legacy() is deprecated and should be updated to use new implementation of write_updated_docs()"
-    )
-
-    updates = [Update(id=lidvid, content=update_content) for lidvid, update_content in ids_and_updates.items()]
-    write_updated_docs(host, updates, index_name)
-
-
 @retry(exceptions=(HTTPError, RuntimeError), tries=6, delay=2, backoff=2, logger=log)
 def _write_bulk_updates_chunk(host: Host, index_name: str, bulk_updates: Iterable[str]):
     headers = {"Content-Type": "application/x-ndjson"}
