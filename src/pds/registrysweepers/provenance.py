@@ -51,7 +51,8 @@ from pds.registrysweepers.utils import configure_logging
 from pds.registrysweepers.utils import get_extant_lidvids
 from pds.registrysweepers.utils import Host
 from pds.registrysweepers.utils import parse_args
-from pds.registrysweepers.utils import write_updated_docs_legacy
+from pds.registrysweepers.utils import Update
+from pds.registrysweepers.utils import write_updated_docs
 
 log = logging.getLogger(__name__)
 
@@ -68,18 +69,17 @@ def run(
 ):
     configure_logging(filepath=log_filepath, log_level=log_level)
 
-    log.info("starting CLI processing")
+    log.info("Starting provenance sweeper processing...")
 
     host = Host(password, base_url, username, verify_host_certs)
 
     extant_lidvids = get_extant_lidvids(host)
     successors = get_successors_by_lidvid(extant_lidvids)
-    updates = {id: {METADATA_SUCCESSOR_KEY: successor} for id, successor in successors.items()}
+    updates = generate_updates(successors)
 
-    if updates:
-        write_updated_docs_legacy(host, updates)
+    write_updated_docs(host, updates)
 
-    log.info("completed CLI processing")
+    log.info("Completed provenance sweeper processing!")
 
 
 def get_successors_by_lidvid(extant_lidvids: Iterable[str]) -> Mapping[str, str]:
@@ -106,6 +106,7 @@ def get_successors_by_lidvid(extant_lidvids: Iterable[str]) -> Mapping[str, str]
         lidvids.sort(key=_vid_as_tuple_of_int, reverse=True)
 
         for successor_idx, lidvid in enumerate(lidvids[1:]):
+            # TODO: consider converting this dict accumulation to a tuple/dict generator (yield) for memory optimization
             successors_by_lidvid[lidvid] = lidvids[successor_idx]
 
     log.info(f"Successors will be updated for {len(successors_by_lidvid)} LIDVIDs!")
@@ -115,6 +116,12 @@ def get_successors_by_lidvid(extant_lidvids: Iterable[str]) -> Mapping[str, str]
             log.debug(f"{lidvid}")
 
     return successors_by_lidvid
+
+
+def generate_updates(successors_by_id: Mapping[str, str]) -> Iterable[Update]:
+    for id, successor in successors_by_id.items():
+        update_content = {METADATA_SUCCESSOR_KEY: successor}
+        yield Update(id=id, content=update_content)
 
 
 if __name__ == "__main__":
