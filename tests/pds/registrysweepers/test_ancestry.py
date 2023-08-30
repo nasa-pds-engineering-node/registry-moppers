@@ -8,7 +8,7 @@ from typing import Tuple
 from pds.registrysweepers import ancestry
 from pds.registrysweepers.ancestry import AncestryRecord
 from pds.registrysweepers.ancestry import get_collection_ancestry_records
-from pds.registrysweepers.utils import Host
+from pds.registrysweepers.utils.db.host import Host
 from pds.registrysweepers.utils.productidentifiers.pdslidvid import PdsLidVid
 
 from tests.mocks.registryquerymock import RegistryQueryMock

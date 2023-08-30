@@ -6,8 +6,8 @@ from typing import Dict
 from typing import Iterable
 from typing import Optional
 
-from pds.registrysweepers.utils import Host
-from pds.registrysweepers.utils import query_registry_db_or_mock
+from pds.registrysweepers.utils.db import query_registry_db_or_mock
+from pds.registrysweepers.utils.db.host import Host
 
 log = logging.getLogger(__name__)
 

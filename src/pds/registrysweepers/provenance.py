@@ -48,11 +48,11 @@ from typing import Union
 
 from pds.registrysweepers.utils import _vid_as_tuple_of_int
 from pds.registrysweepers.utils import configure_logging
-from pds.registrysweepers.utils import get_extant_lidvids
-from pds.registrysweepers.utils import Host
 from pds.registrysweepers.utils import parse_args
-from pds.registrysweepers.utils import Update
-from pds.registrysweepers.utils import write_updated_docs
+from pds.registrysweepers.utils.db import get_extant_lidvids
+from pds.registrysweepers.utils.db import write_updated_docs
+from pds.registrysweepers.utils.db.host import Host
+from pds.registrysweepers.utils.db.update import Update
 
 log = logging.getLogger(__name__)
 
