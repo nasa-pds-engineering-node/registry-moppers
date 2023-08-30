@@ -16,7 +16,7 @@ from pds.registrysweepers.ancestry.generation import get_nonaggregate_ancestry_r
 from pds.registrysweepers.utils import configure_logging
 from pds.registrysweepers.utils import Host
 from pds.registrysweepers.utils import parse_args
-from pds.registrysweepers.utils import write_updated_docs
+from pds.registrysweepers.utils import write_updated_docs_legacy
 
 log = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ def run(
 
     if updates and bulk_updates_sink is None:
         log.info("Writing bulk updates to database...")
-        write_updated_docs(host, updates)
+        write_updated_docs_legacy(host, updates)
 
     log.info("Ancestry sweeper processing complete!")
 

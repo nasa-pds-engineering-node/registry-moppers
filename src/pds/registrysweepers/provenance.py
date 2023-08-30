@@ -51,7 +51,7 @@ from pds.registrysweepers.utils import configure_logging
 from pds.registrysweepers.utils import get_extant_lidvids
 from pds.registrysweepers.utils import Host
 from pds.registrysweepers.utils import parse_args
-from pds.registrysweepers.utils import write_updated_docs
+from pds.registrysweepers.utils import write_updated_docs_legacy
 
 log = logging.getLogger(__name__)
 
@@ -77,7 +77,7 @@ def run(
     updates = {id: {METADATA_SUCCESSOR_KEY: successor} for id, successor in successors.items()}
 
     if updates:
-        write_updated_docs(host, updates)
+        write_updated_docs_legacy(host, updates)
 
     log.info("completed CLI processing")
 

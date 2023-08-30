@@ -12,7 +12,7 @@ from typing import Union
 from pds.registrysweepers.utils import configure_logging
 from pds.registrysweepers.utils import Host
 from pds.registrysweepers.utils import query_registry_db
-from pds.registrysweepers.utils import write_updated_docs
+from pds.registrysweepers.utils import write_updated_docs_legacy
 
 from . import allarrays
 
@@ -68,5 +68,5 @@ def run(
                         repairs.update(func(src, fieldname))
         if repairs:
             log.info(f"Writing repairs to document: {id}")
-            write_updated_docs(host, {id: repairs})
+            write_updated_docs_legacy(host, {id: repairs})
     return

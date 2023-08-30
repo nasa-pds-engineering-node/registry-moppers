@@ -213,7 +213,8 @@ def get_extant_lidvids(host: Host) -> Iterable[str]:
     return map(lambda doc: doc["_source"]["lidvid"], results)
 
 
-def write_updated_docs(host: Host, ids_and_updates: Mapping[str, Dict], index_name: str = "registry"):
+def write_updated_docs_legacy(host: Host, ids_and_updates: Mapping[str, Dict], index_name: str = "registry"):
+    # TODO: switch over calls to this function to new write_updated_docs() and remove this implementation
     """
     Given an OpenSearch host and a mapping of doc ids onto updates to those docs, write bulk updates to documents in db.
     """
