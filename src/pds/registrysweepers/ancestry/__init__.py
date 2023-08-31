@@ -14,10 +14,10 @@ from pds.registrysweepers.ancestry.generation import get_bundle_ancestry_records
 from pds.registrysweepers.ancestry.generation import get_collection_ancestry_records
 from pds.registrysweepers.ancestry.generation import get_nonaggregate_ancestry_records
 from pds.registrysweepers.utils import configure_logging
-from pds.registrysweepers.utils import Host
 from pds.registrysweepers.utils import parse_args
-from pds.registrysweepers.utils import Update
-from pds.registrysweepers.utils import write_updated_docs
+from pds.registrysweepers.utils.db import write_updated_docs
+from pds.registrysweepers.utils.db.host import Host
+from pds.registrysweepers.utils.db.update import Update
 
 log = logging.getLogger(__name__)
 

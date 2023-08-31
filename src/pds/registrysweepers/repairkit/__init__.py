@@ -12,12 +12,12 @@ from typing import Iterable
 from typing import Union
 
 from pds.registrysweepers.utils import configure_logging
-from pds.registrysweepers.utils import Host
 from pds.registrysweepers.utils import query_registry_db
-from pds.registrysweepers.utils import Update
-from pds.registrysweepers.utils import write_updated_docs
+from pds.registrysweepers.utils.db.host import Host
+from pds.registrysweepers.utils.db.update import Update
 
 from . import allarrays
+from ..utils.db import write_updated_docs
 
 """
 dictionary repair tools is {field_name:[funcs]} where field_name can be:

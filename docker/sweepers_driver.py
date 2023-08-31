@@ -63,7 +63,8 @@ from datetime import datetime
 from typing import Callable
 
 from pds.registrysweepers import provenance, ancestry, repairkit
-from pds.registrysweepers.utils import configure_logging, get_human_readable_elapsed_since, parse_log_level
+from pds.registrysweepers.utils import configure_logging, parse_log_level
+from pds.registrysweepers.utils.misc import get_human_readable_elapsed_since
 
 configure_logging(filepath=None, log_level=logging.INFO)
 log = logging.getLogger(__name__)
