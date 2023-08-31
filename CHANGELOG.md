@@ -15,6 +15,7 @@
 
 **Other closed issues:**
 
+- Empty write HTTP400 regression [\#64](https://github.com/NASA-PDS/registry-sweepers/issues/64)
 - Remedy absent retry-behaviour [\#56](https://github.com/NASA-PDS/registry-sweepers/issues/56)
 - Create registry-sweeper cluster and deploy/schedule the tasks [\#52](https://github.com/NASA-PDS/registry-sweepers/issues/52)
 - Tweak \_bulk flush threshold [\#46](https://github.com/NASA-PDS/registry-sweepers/issues/46)
