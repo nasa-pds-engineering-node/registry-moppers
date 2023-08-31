@@ -159,8 +159,9 @@ def write_updated_docs(host: Host, updates: Iterable[Update], index_name: str = 
     remaining_products_to_write_count = int(len(bulk_updates_buffer) / 2)
     updated_doc_count += remaining_products_to_write_count
 
-    log.info(f"Writing documents updates for {remaining_products_to_write_count} remaining products to db...")
-    _write_bulk_updates_chunk(host, index_name, bulk_updates_buffer)
+    if len(bulk_updates_buffer) > 0:
+        log.info(f"Writing documents updates for {remaining_products_to_write_count} remaining products to db...")
+        _write_bulk_updates_chunk(host, index_name, bulk_updates_buffer)
 
     log.info(f"Updated documents for {updated_doc_count} total products!")
 
