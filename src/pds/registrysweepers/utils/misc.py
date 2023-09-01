@@ -1,6 +1,7 @@
 import random
 from datetime import datetime
 from typing import Any
+from typing import Callable
 from typing import List
 
 
@@ -31,3 +32,18 @@ def get_human_readable_elapsed_since(begin: datetime) -> str:
 def get_random_hex_id(id_len: int = 6) -> str:
     val = random.randint(0, 16**id_len)
     return hex(val)[2:]
+
+
+def auto_raise_for_status(f: Callable) -> Callable:
+    """
+    Given a function requests.{verb}, return a version of it which will automatically raise_for_status().  This is
+    used with retry.retry_call() in cirumstances where it is not desirable to extract the retryable block to its own
+    function, for example in a loop which shares a lot of state with its enclosing scope.
+    """
+
+    def wrapped_f(*args, **kwargs):
+        resp = f(*args, **kwargs)
+        resp.raise_for_status()
+        return resp
+
+    return wrapped_f

@@ -12,6 +12,7 @@ from typing import Optional
 import requests
 from pds.registrysweepers.utils.db.host import Host
 from pds.registrysweepers.utils.db.update import Update
+from pds.registrysweepers.utils.misc import auto_raise_for_status
 from pds.registrysweepers.utils.misc import get_random_hex_id
 from requests import HTTPError
 from retry import retry
@@ -54,15 +55,15 @@ def query_registry_db(
     more_data_exists = True
     while more_data_exists:
         resp = retry_call(
-            requests.get,
+            auto_raise_for_status(requests.get),
             fargs=[urllib.parse.urljoin(host.url, path)],
             fkwargs={"auth": (host.username, host.password), "verify": host.verify, "json": req_content},
+            exceptions=(HTTPError, RuntimeError),
             tries=6,
             delay=2,
             backoff=2,
             logger=log,
         )
-        resp.raise_for_status()
 
         data = resp.json()
         path = "_search/scroll"
@@ -101,7 +102,7 @@ def query_registry_db(
     if "scroll_id" in req_content:
         path = f'_search/scroll/{req_content["scroll_id"]}'
         retry_call(
-            requests.delete,
+            auto_raise_for_status(requests.delete),
             fargs=[urllib.parse.urljoin(host.url, path)],
             fkwargs={"auth": (host.username, host.password), "verify": host.verify},
             tries=6,
