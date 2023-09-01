@@ -40,7 +40,7 @@ def run(
         http_auth=(username, password)
     )
 
-    solr_itr = SlowSolrDocs(SOLR_URL, "*", rows=100, )
+    solr_itr = SlowSolrDocs(SOLR_URL, "*", rows=100)
 
     create_legacy_registry_index(es_conn=es_conn)
 

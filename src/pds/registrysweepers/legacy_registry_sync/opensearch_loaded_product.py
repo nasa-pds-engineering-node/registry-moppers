@@ -1,20 +1,19 @@
 import elasticsearch
+import os
+
+# Optional Environment variable  used for the Cross Cluster Search
+# connections aliases. Each element is separated by a ","
+CCS_CONN = "CCS_CONN"
+
 
 def get_cross_cluster_indices():
-    # use the CCS connection aliases
-    clusters = [
-        "atm-prod-ccs",
-        "geo-prod-ccs",
-        "img-prod-ccs",
-        "naif-prod-ccs",
-        "ppi-prod-ccs",
-        "psa-prod",
-        "rms-prod",
-        "sbnpsi-prod-ccs",
-        "sbnumd-prod-ccs"
-    ]
+
     indices = ["registry"]
-    indices.extend([f"{c}:registry" for c in clusters])
+
+    if CCS_CONN in os.environ:
+        clusters = os.environ[CCS_CONN].split(',')
+        indices.extend([f"{c}:registry" for c in clusters])
+
     return indices
 
 

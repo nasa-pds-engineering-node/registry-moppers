@@ -137,7 +137,7 @@ for sweeper in sweepers:
     run_sweeper_f = run_factory(sweeper)
     run_sweeper_f()
 
-for o, s in optional_sweepers:
+for o, s in optional_sweepers.items():
     if hasattr(args, o):
         run_sweeper_f = run_factory(s)
         run_sweeper_f()
