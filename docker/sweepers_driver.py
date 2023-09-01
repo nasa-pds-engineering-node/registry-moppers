@@ -114,19 +114,26 @@ parser = argparse.ArgumentParser(
     prog='registry-sweepers',
     description='sweeps the PDS registry with different routines meant to run regularly on the database'
 )
+
+# define optional sweepers
 parser.add_argument('--legacy-sync', action='store_true')
+optional_sweepers = {
+    'legacy_sync': legacy_registry_sync.run
+}
+
 args = parser.parse_args()
 
-# Define sweepers to be run here, in order of execution
+
+# Define default sweepers to be run here, in order of execution
 sweepers = [
     repairkit.run,
     provenance.run,
     ancestry.run
 ]
 
-optional_sweepers = {
-    'legacy_sync': legacy_registry_sync.run
-}
+for option, sweeper in optional_sweepers.items():
+    if getattr(args, option):
+        sweepers.append(sweeper)
 
 sweeper_descriptions = [inspect.getmodule(f).__name__ for f in sweepers]
 log.info(f'Running sweepers: {sweeper_descriptions}')
@@ -136,11 +143,5 @@ execution_begin = datetime.now()
 for sweeper in sweepers:
     run_sweeper_f = run_factory(sweeper)
     run_sweeper_f()
-
-for o, s in optional_sweepers.items():
-    if hasattr(args, o):
-        run_sweeper_f = run_factory(s)
-        run_sweeper_f()
-
 
 log.info(f'Sweepers successfully executed in {get_human_readable_elapsed_since(execution_begin)}')

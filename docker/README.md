@@ -14,16 +14,16 @@ Requires a running deployment of registry
 To build and run  (assuming registry local-dev defaults for host/credentials)
 
     cd path/to/registry-sweepers/
-    docker build -t registry-sweepers docker --file ./docker/Dockerfile .
-    docker run -e PROV_ENDPOINT='https://localhost:9200/' -e PROV_CREDENTIALS='{"admin": "admin"}' registry-sweepers
+    docker image build --tag registry-sweepers --file ./docker/Dockerfile .
+    docker run --env PROV_ENDPOINT='https://localhost:9200/' --env PROV_CREDENTIALS='{"admin": "admin"}' registry-sweepers
 
 ### Release of new versions
 
 To release a new version for I&T, an updated image must be built and published to Docker Hub at `nasapds/registry-sweepers`
 
     cd path/to/registry-sweepers/docker
-    docker build -t nasapds/registry-sweepers:{version} --file ./docker/Dockerfile .
-    docker push nasapds/registry-sweepers:{version}
+    docker image build --tag nasapds/registry-sweepers:{version} --file ./docker/Dockerfile .
+    docker image push nasapds/registry-sweepers:{version}
 
 ### Production Deployment
 
