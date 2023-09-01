@@ -45,6 +45,11 @@ FROM python:3.10-slim-bullseye
 ENV INSTALL_WORKDIR=/tmp/registry-sweepers
 
 COPY . $INSTALL_WORKDIR
+
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y git
+
 RUN pip install $INSTALL_WORKDIR \
  && cp $INSTALL_WORKDIR/docker/sweepers_driver.py /usr/local/bin/ \
  && rm -r $INSTALL_WORKDIR
