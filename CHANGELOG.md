@@ -1,6 +1,6 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2023-08-31)
+## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2023-09-01)
 
 [Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/v1.0.0...«unknown»)
 
@@ -15,6 +15,7 @@
 
 **Other closed issues:**
 
+- Fix bugged retry functionality [\#66](https://github.com/NASA-PDS/registry-sweepers/issues/66)
 - Empty write HTTP400 regression [\#64](https://github.com/NASA-PDS/registry-sweepers/issues/64)
 - Remedy absent retry-behaviour [\#56](https://github.com/NASA-PDS/registry-sweepers/issues/56)
 - Create registry-sweeper cluster and deploy/schedule the tasks [\#52](https://github.com/NASA-PDS/registry-sweepers/issues/52)
