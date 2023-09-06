@@ -15,8 +15,8 @@ from pds.registrysweepers.utils.db.update import Update
 from pds.registrysweepers.utils.misc import auto_raise_for_status
 from pds.registrysweepers.utils.misc import get_random_hex_id
 from requests import HTTPError
-from retry import retry
-from retry.api import retry_call
+from retry import retry  # type: ignore
+from retry.api import retry_call  # type: ignore
 
 log = logging.getLogger(__name__)
 
@@ -152,7 +152,7 @@ def write_updated_docs(host: Host, updates: Iterable[Update], index_name: str = 
         update_statement_strs = update_as_statements(update)
 
         for s in update_statement_strs:
-            bulk_buffer_size_mb += sys.getsizeof(s) / 1024**2
+            bulk_buffer_size_mb += sys.getsizeof(s) / 1024 ** 2
 
         bulk_updates_buffer.extend(update_statement_strs)
         updated_doc_count += 1

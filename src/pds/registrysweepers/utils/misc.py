@@ -30,7 +30,7 @@ def get_human_readable_elapsed_since(begin: datetime) -> str:
 
 
 def get_random_hex_id(id_len: int = 6) -> str:
-    val = random.randint(0, 16**id_len)
+    val = random.randint(0, 16 ** id_len)
     return hex(val)[2:]
 
 
