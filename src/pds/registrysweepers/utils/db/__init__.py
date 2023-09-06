@@ -92,7 +92,7 @@ def query_registry_db(
         hits_data_present_in_response = len(response_hits) > 0
         if not hits_data_present_in_response:
             log.error(
-                f"Response for query {query_id} contained no hits when hits were expected.  Returned data is incomplete.  Response was: {data}"
+                f"Response for query {query_id} contained no hits when hits were expected.  Returned data is incomplete (got {served_hits} of {total_hits} total hits).  Response was: {data}"
             )
             break
 
