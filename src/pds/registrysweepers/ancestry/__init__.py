@@ -9,6 +9,7 @@ from typing import Set
 from typing import Tuple
 from typing import Union
 
+from opensearchpy import OpenSearch
 from pds.registrysweepers.ancestry.ancestryrecord import AncestryRecord
 from pds.registrysweepers.ancestry.generation import get_bundle_ancestry_records
 from pds.registrysweepers.ancestry.generation import get_collection_ancestry_records
@@ -16,6 +17,7 @@ from pds.registrysweepers.ancestry.generation import get_nonaggregate_ancestry_r
 from pds.registrysweepers.utils import configure_logging
 from pds.registrysweepers.utils import parse_args
 from pds.registrysweepers.utils.db import write_updated_docs
+from pds.registrysweepers.utils.db.client import get_opensearch_client
 from pds.registrysweepers.utils.db.host import Host
 from pds.registrysweepers.utils.db.update import Update
 
@@ -26,10 +28,7 @@ METADATA_PARENT_COLLECTION_KEY = "ops:Provenance/ops:parent_collection_identifie
 
 
 def run(
-    base_url: str,
-    username: str,
-    password: str,
-    verify_host_certs: bool = True,
+    client: OpenSearch,
     log_filepath: Union[str, None] = None,
     log_level: int = logging.INFO,
     registry_mock_query_f: Optional[Callable[[str], Iterable[Dict]]] = None,
@@ -103,12 +102,12 @@ if __name__ == "__main__":
     """
 
     args = parse_args(description=cli_description)
+    client = get_opensearch_client(
+        endpoint_url=args.base_URL, username=args.username, password=args.password, verify_certs=not args.insecure
+    )
 
     run(
-        base_url=args.base_URL,
-        username=args.username,
-        password=args.password,
-        verify_host_certs=not args.insecure,
+        client=client,
         log_level=args.log_level,
         log_filepath=args.log_file,
     )

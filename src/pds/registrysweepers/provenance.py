@@ -46,11 +46,13 @@ from typing import List
 from typing import Mapping
 from typing import Union
 
+from opensearchpy import OpenSearch
 from pds.registrysweepers.utils import _vid_as_tuple_of_int
 from pds.registrysweepers.utils import configure_logging
 from pds.registrysweepers.utils import parse_args
 from pds.registrysweepers.utils.db import get_extant_lidvids
 from pds.registrysweepers.utils.db import write_updated_docs
+from pds.registrysweepers.utils.db.client import get_opensearch_client
 from pds.registrysweepers.utils.db.host import Host
 from pds.registrysweepers.utils.db.update import Update
 
@@ -60,10 +62,7 @@ METADATA_SUCCESSOR_KEY = "ops:Provenance/ops:superseded_by"
 
 
 def run(
-    base_url: str,
-    username: str,
-    password: str,
-    verify_host_certs: bool = True,
+    client: OpenSearch,
     log_filepath: Union[str, None] = None,
     log_level: int = logging.INFO,
 ):
@@ -71,7 +70,7 @@ def run(
 
     log.info("Starting provenance sweeper processing...")
 
-    host = Host(password, base_url, username, verify_host_certs)
+    # host = Host(password, base_url, username, verify_host_certs)
 
     extant_lidvids = get_extant_lidvids(host)
     successors = get_successors_by_lidvid(extant_lidvids)
@@ -144,12 +143,12 @@ if __name__ == "__main__":
     """
 
     args = parse_args(description=cli_description, epilog=cli_epilog)
+    client = get_opensearch_client(
+        endpoint_url=args.base_URL, username=args.username, password=args.password, verify_certs=not args.insecure
+    )
 
     run(
-        base_url=args.base_URL,
-        username=args.username,
-        password=args.password,
-        verify_host_certs=not args.insecure,
+        client=client,
         log_level=args.log_level,
         log_filepath=args.log_file,
     )

@@ -64,6 +64,7 @@ from typing import Callable
 
 from pds.registrysweepers import provenance, ancestry, repairkit
 from pds.registrysweepers.utils import configure_logging, parse_log_level
+from pds.registrysweepers.utils.db.client import get_opensearch_client_from_environment
 from pds.registrysweepers.utils.misc import get_human_readable_elapsed_since
 
 configure_logging(filepath=None, log_level=logging.INFO)
@@ -100,12 +101,9 @@ log_level = parse_log_level(os.environ.get('LOGLEVEL', 'INFO'))
 def run_factory(sweeper_f: Callable) -> Callable:
     return functools.partial(
         sweeper_f,
-        base_url=opensearch_endpoint,
-        username=username,
-        password=password,
+        client=get_opensearch_client_from_environment(verify_certs=True if not dev_mode else False),
         log_filepath='provenance.log',
-        log_level=log_level,
-        verify_host_certs=True if not dev_mode else False
+        log_level=log_level
     )
 
 
