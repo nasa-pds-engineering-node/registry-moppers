@@ -72,11 +72,11 @@ def run(
 
     # host = Host(password, base_url, username, verify_host_certs)
 
-    extant_lidvids = get_extant_lidvids(host)
+    extant_lidvids = get_extant_lidvids(client)
     successors = get_successors_by_lidvid(extant_lidvids)
     updates = generate_updates(successors)
 
-    write_updated_docs(host, updates)
+    write_updated_docs(client, updates)
 
     log.info("Completed provenance sweeper processing!")
 
