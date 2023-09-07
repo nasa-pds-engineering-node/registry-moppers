@@ -39,18 +39,16 @@ def run(
 
     log.info("Starting ancestry sweeper")
 
-    host = Host(password, base_url, username, verify_host_certs)
-
-    bundle_records = get_bundle_ancestry_records(host, registry_mock_query_f)
-    collection_records = list(get_collection_ancestry_records(host, registry_mock_query_f))
-    nonaggregate_records = get_nonaggregate_ancestry_records(host, collection_records, registry_mock_query_f)
+    bundle_records = get_bundle_ancestry_records(client, registry_mock_query_f)
+    collection_records = list(get_collection_ancestry_records(client, registry_mock_query_f))
+    nonaggregate_records = get_nonaggregate_ancestry_records(client, collection_records, registry_mock_query_f)
 
     ancestry_records = chain(bundle_records, collection_records, nonaggregate_records)
     updates = generate_updates(ancestry_records, ancestry_records_accumulator, bulk_updates_sink)
 
     if bulk_updates_sink is None:
         log.info("Writing bulk updates to database...")
-        write_updated_docs(host, updates)
+        write_updated_docs(client, updates)
     else:
         # consume generator to dump bulk updates to sink
         for _ in updates:
