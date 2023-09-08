@@ -5,6 +5,7 @@ from typing import List
 from typing import Mapping
 from typing import Set
 
+from opensearchpy import OpenSearch
 from pds.registrysweepers.ancestry.ancestryrecord import AncestryRecord
 from pds.registrysweepers.ancestry.queries import DbMockTypeDef
 from pds.registrysweepers.ancestry.queries import get_bundle_ancestry_records_query
@@ -20,9 +21,9 @@ from pds.registrysweepers.utils.productidentifiers.pdslidvid import PdsLidVid
 log = logging.getLogger(__name__)
 
 
-def get_bundle_ancestry_records(host: Host, db_mock: DbMockTypeDef = None) -> Iterable[AncestryRecord]:
+def get_bundle_ancestry_records(client: OpenSearch, db_mock: DbMockTypeDef = None) -> Iterable[AncestryRecord]:
     log.info("Generating AncestryRecords for bundles...")
-    docs = get_bundle_ancestry_records_query(host, db_mock)
+    docs = get_bundle_ancestry_records_query(client, db_mock)
     for doc in docs:
         try:
             yield AncestryRecord(lidvid=PdsLidVid.from_string(doc["_source"]["lidvid"]))
@@ -85,10 +86,12 @@ def get_ancestry_by_collection_lid(
     return ancestry_by_collection_lid
 
 
-def get_collection_ancestry_records(host: Host, registry_db_mock: DbMockTypeDef = None) -> Iterable[AncestryRecord]:
+def get_collection_ancestry_records(
+    client: OpenSearch, registry_db_mock: DbMockTypeDef = None
+) -> Iterable[AncestryRecord]:
     log.info("Generating AncestryRecords for collections...")
-    bundles_docs = get_collection_ancestry_records_bundles_query(host, registry_db_mock)
-    collections_docs = list(get_collection_ancestry_records_collections_query(host, registry_db_mock))
+    bundles_docs = get_collection_ancestry_records_bundles_query(client, registry_db_mock)
+    collections_docs = list(get_collection_ancestry_records_collections_query(client, registry_db_mock))
 
     # Prepare LID alias sets for every LID
     collection_aliases_by_lid: Dict[PdsLid, Set[PdsLid]] = get_collection_aliases_by_lid(collections_docs)
@@ -149,7 +152,7 @@ def get_collection_ancestry_records(host: Host, registry_db_mock: DbMockTypeDef 
 
 
 def get_nonaggregate_ancestry_records(
-    host: Host,
+    client: OpenSearch,
     collection_ancestry_records: Iterable[AncestryRecord],
     registry_db_mock: DbMockTypeDef = None,
 ) -> Iterable[AncestryRecord]:
@@ -160,7 +163,7 @@ def get_nonaggregate_ancestry_records(
         record.lidvid: record.parent_bundle_lidvids for record in collection_ancestry_records
     }
 
-    collection_refs_query_docs = get_nonaggregate_ancestry_records_query(host, registry_db_mock)
+    collection_refs_query_docs = get_nonaggregate_ancestry_records_query(client, registry_db_mock)
 
     nonaggregate_ancestry_records_by_lidvid = {}
     # For each collection, add the collection and its bundle ancestry to all products the collection contains

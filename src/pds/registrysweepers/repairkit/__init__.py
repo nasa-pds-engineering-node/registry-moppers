@@ -11,8 +11,11 @@ from typing import Dict
 from typing import Iterable
 from typing import Union
 
+from opensearchpy import OpenSearch
 from pds.registrysweepers.utils import configure_logging
+from pds.registrysweepers.utils import parse_args
 from pds.registrysweepers.utils import query_registry_db
+from pds.registrysweepers.utils.db.client import get_opensearch_client
 from pds.registrysweepers.utils.db.host import Host
 from pds.registrysweepers.utils.db.update import Update
 
@@ -67,19 +70,28 @@ def generate_updates(docs: Iterable[Dict]) -> Iterable[Update]:
 
 
 def run(
-    base_url: str,
-    username: str,
-    password: str,
-    verify_host_certs: bool = True,
+    client: OpenSearch,
     log_filepath: Union[str, None] = None,
     log_level: int = logging.INFO,
 ):
     configure_logging(filepath=log_filepath, log_level=log_level)
     log.info("Starting repairkit sweeper processing...")
-    host = Host(password, base_url, username, verify_host_certs)
 
-    all_docs = query_registry_db(host, {"match_all": {}}, {})
+    all_docs = query_registry_db(client, {"query": {"match_all": {}}}, {})
     updates = generate_updates(all_docs)
-    write_updated_docs(host, updates)
+    write_updated_docs(client, updates)
 
     log.info("Repairkit sweeper processing complete!")
+
+
+if __name__ == "__main__":
+    args = parse_args(description="sweep through the registry documents and fix common errors")
+    client = get_opensearch_client(
+        endpoint_url=args.base_URL, username=args.username, password=args.password, verify_certs=not args.insecure
+    )
+
+    run(
+        client=client,
+        log_level=args.log_level,
+        log_filepath=args.log_file,
+    )
