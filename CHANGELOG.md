@@ -1,6 +1,6 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2023-09-06)
+## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2023-09-08)
 
 [Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/v1.0.0...«unknown»)
 
@@ -17,7 +17,9 @@
 
 - Fix bugged retry functionality [\#66](https://github.com/NASA-PDS/registry-sweepers/issues/66)
 - Empty write HTTP400 regression [\#64](https://github.com/NASA-PDS/registry-sweepers/issues/64)
+- Registry-Sweeper ECS Enchancements \(Pre Multi-Tenancy\) [\#59](https://github.com/NASA-PDS/registry-sweepers/issues/59)
 - Remedy absent retry-behaviour [\#56](https://github.com/NASA-PDS/registry-sweepers/issues/56)
+- Remediate findings from Provenance Script Testing [\#55](https://github.com/NASA-PDS/registry-sweepers/issues/55)
 - Create registry-sweeper cluster and deploy/schedule the tasks [\#52](https://github.com/NASA-PDS/registry-sweepers/issues/52)
 - Tweak \_bulk flush threshold [\#46](https://github.com/NASA-PDS/registry-sweepers/issues/46)
 - Remove CCS support [\#43](https://github.com/NASA-PDS/registry-sweepers/issues/43)
