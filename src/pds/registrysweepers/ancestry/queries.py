@@ -8,7 +8,6 @@ from typing import Optional
 
 from opensearchpy import OpenSearch
 from pds.registrysweepers.utils.db import query_registry_db_or_mock
-from pds.registrysweepers.utils.db.host import Host
 
 log = logging.getLogger(__name__)
 

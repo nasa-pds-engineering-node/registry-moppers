@@ -12,7 +12,6 @@ from pds.registrysweepers.ancestry.queries import get_bundle_ancestry_records_qu
 from pds.registrysweepers.ancestry.queries import get_collection_ancestry_records_bundles_query
 from pds.registrysweepers.ancestry.queries import get_collection_ancestry_records_collections_query
 from pds.registrysweepers.ancestry.queries import get_nonaggregate_ancestry_records_query
-from pds.registrysweepers.utils.db.host import Host
 from pds.registrysweepers.utils.misc import coerce_list_type
 from pds.registrysweepers.utils.productidentifiers.factory import PdsProductIdentifierFactory
 from pds.registrysweepers.utils.productidentifiers.pdslid import PdsLid

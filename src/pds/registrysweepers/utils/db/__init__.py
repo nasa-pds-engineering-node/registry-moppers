@@ -1,9 +1,6 @@
-import functools
 import json
 import logging
 import sys
-import urllib.parse
-from datetime import timedelta
 from typing import Callable
 from typing import Dict
 from typing import Iterable
@@ -11,12 +8,9 @@ from typing import List
 from typing import Mapping
 from typing import Optional
 
-import requests
 from opensearchpy import OpenSearch
-from pds.registrysweepers.utils.db.host import Host
 from pds.registrysweepers.utils.db.update import Update
 from pds.registrysweepers.utils.misc import get_random_hex_id
-from requests import HTTPError
 from retry import retry
 from retry.api import retry_call
 

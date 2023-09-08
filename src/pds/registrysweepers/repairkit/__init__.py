@@ -16,7 +16,6 @@ from pds.registrysweepers.utils import configure_logging
 from pds.registrysweepers.utils import parse_args
 from pds.registrysweepers.utils import query_registry_db
 from pds.registrysweepers.utils.db.client import get_opensearch_client
-from pds.registrysweepers.utils.db.host import Host
 from pds.registrysweepers.utils.db.update import Update
 
 from . import allarrays

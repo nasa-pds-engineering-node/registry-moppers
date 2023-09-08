@@ -5,7 +5,6 @@ from typing import List
 from typing import Union
 
 from pds.registrysweepers.utils.db import query_registry_db
-from pds.registrysweepers.utils.db.host import Host
 
 log = logging.getLogger(__name__)
 
