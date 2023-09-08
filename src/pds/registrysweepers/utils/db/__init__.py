@@ -51,7 +51,7 @@ def query_registry_db(
     scroll_id = None
     while more_data_exists:
         if scroll_id is None:
-            fetch_func = lambda: client.search(
+            fetch_func = lambda: client.search(  # noqa: E731
                 index=index_name,
                 body=query,
                 scroll=scroll_keepalive,
@@ -60,7 +60,7 @@ def query_registry_db(
                 _source_excludes=_source.get("excludes", []),  # TODO: Break out from the enclosing _source object
             )
         else:
-            fetch_func = lambda: client.scroll(scroll_id=scroll_id, scroll=scroll_keepalive)
+            fetch_func = lambda: client.scroll(scroll_id=scroll_id, scroll=scroll_keepalive)  # noqa: E731, B023
 
         results = retry_call(
             fetch_func,

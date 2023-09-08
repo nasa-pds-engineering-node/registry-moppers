@@ -56,9 +56,7 @@ class AncestryBasicTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         ancestry.run(
-            base_url="",
-            username="",
-            password="",
+            client=None,
             registry_mock_query_f=cls.registry_query_mock.get_mocked_query,
             ancestry_records_accumulator=cls.ancestry_records,
             bulk_updates_sink=cls.bulk_updates,
@@ -146,9 +144,7 @@ class AncestryAlternateIdsTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         ancestry.run(
-            base_url="",
-            username="",
-            password="",
+            client=None,
             registry_mock_query_f=cls.registry_query_mock.get_mocked_query,
             ancestry_records_accumulator=cls.ancestry_records,
             bulk_updates_sink=cls.bulk_updates,
@@ -257,9 +253,7 @@ class AncestryMalformedDocsTestCase(unittest.TestCase):
 
     def test_ancestry_completes_without_fatal_error(self):
         ancestry.run(
-            base_url="",
-            username="",
-            password="",
+            client=None,
             registry_mock_query_f=self.registry_query_mock.get_mocked_query,
             ancestry_records_accumulator=self.ancestry_records,
             bulk_updates_sink=self.bulk_updates,
