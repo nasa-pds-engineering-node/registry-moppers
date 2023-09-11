@@ -47,3 +47,7 @@ def auto_raise_for_status(f: Callable) -> Callable:
         return resp
 
     return wrapped_f
+
+
+def get_sweeper_version_metadata_key(sweeper_name: str) -> str:
+    return f"ops:Provenance/ops:registry_sweepers_{sweeper_name}_version"

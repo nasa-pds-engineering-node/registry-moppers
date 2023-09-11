@@ -12,11 +12,14 @@ from typing import Iterable
 from typing import Union
 
 from opensearchpy import OpenSearch
+from pds.registrysweepers.repairkit.versioning import SWEEPERS_REPAIRKIT_VERSION
 from pds.registrysweepers.utils import configure_logging
 from pds.registrysweepers.utils import parse_args
 from pds.registrysweepers.utils import query_registry_db
 from pds.registrysweepers.utils.db.client import get_opensearch_client
+from pds.registrysweepers.utils.db.indexing import ensure_index_mapping
 from pds.registrysweepers.utils.db.update import Update
+from pds.registrysweepers.utils.misc import get_sweeper_version_metadata_key
 
 from . import allarrays
 from ..utils.db import write_updated_docs
@@ -50,12 +53,14 @@ REPAIR_TOOLS = {
 log = logging.getLogger(__name__)
 
 
-def generate_updates(docs: Iterable[Dict]) -> Iterable[Update]:
+def generate_updates(
+    docs: Iterable[Dict], repairkit_version_metadata_key: str, repairkit_version: int
+) -> Iterable[Update]:
     """Lazily generate necessary Update objects for a collection of db documents"""
     for document in docs:
         id = document["_id"]
         src = document["_source"]
-        repairs = {}
+        repairs = {repairkit_version_metadata_key: int(repairkit_version)}
         log.debug(f"applying repairkit sweeper to document: {id}")
         for fieldname, data in src.items():
             for regex, funcs in REPAIR_TOOLS.items():
@@ -74,10 +79,19 @@ def run(
     log_level: int = logging.INFO,
 ):
     configure_logging(filepath=log_filepath, log_level=log_level)
-    log.info("Starting repairkit sweeper processing...")
+    log.info(f"Starting repairkit v{SWEEPERS_REPAIRKIT_VERSION} sweeper processing...")
 
-    all_docs = query_registry_db(client, {"query": {"match_all": {}}}, {})
-    updates = generate_updates(all_docs)
+    repairkit_version_metadata_key = get_sweeper_version_metadata_key("repairkit")
+
+    unprocessed_docs_query = {
+        "query": {
+            "bool": {"must_not": [{"range": {repairkit_version_metadata_key: {"gte": SWEEPERS_REPAIRKIT_VERSION}}}]}
+        }
+    }
+
+    all_docs = query_registry_db(client, unprocessed_docs_query, {})
+    updates = generate_updates(all_docs, repairkit_version_metadata_key, SWEEPERS_REPAIRKIT_VERSION)
+    ensure_index_mapping(client, "registry", repairkit_version_metadata_key, "integer")
     write_updated_docs(client, updates)
 
     log.info("Repairkit sweeper processing complete!")
