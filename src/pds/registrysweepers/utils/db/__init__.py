@@ -91,7 +91,7 @@ def query_registry_db(
         # expected total hits value.
         # TODO: Remove this upon implementation of https://github.com/NASA-PDS/registry-sweepers/issues/42
         hits_data_present_in_response = len(response_hits) > 0
-        if not hits_data_present_in_response:
+        if not hits_data_present_in_response and served_hits < total_hits:
             log.error(
                 f"Response for query {query_id} contained no hits when hits were expected.  Returned data is incomplete (got {served_hits} of {total_hits} total hits).  Response was: {results}"
             )
