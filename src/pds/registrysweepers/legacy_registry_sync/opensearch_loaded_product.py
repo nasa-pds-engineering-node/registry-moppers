@@ -1,6 +1,6 @@
 import os
 
-import elasticsearch
+import elasticsearch  # type: ignore
 
 # Optional Environment variable  used for the Cross Cluster Search
 # connections aliases. Each element is separated by a ","

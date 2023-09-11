@@ -1,7 +1,7 @@
 import logging
 from typing import Union
 
-import elasticsearch.helpers
+import elasticsearch.helpers  # type: ignore
 from elasticsearch import Elasticsearch
 from pds.registrysweepers.legacy_registry_sync.opensearch_loaded_product import get_already_loaded_lidvids
 from pds.registrysweepers.legacy_registry_sync.solr_doc_export_to_opensearch import SolrOsWrapperIter
