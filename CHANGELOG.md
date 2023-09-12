@@ -4,6 +4,10 @@
 
 [Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/v1.0.0...«unknown»)
 
+**Improvements:**
+
+- Update repairkit to include repairkit version metadata and check to streamline execution [\#70](https://github.com/NASA-PDS/registry-sweepers/issues/70) [[s.high](https://github.com/NASA-PDS/registry-sweepers/labels/s.high)]
+
 **Defects:**
 
 - Fatal error upon unexpected error due to bad json path [\#37](https://github.com/NASA-PDS/registry-sweepers/issues/37)
@@ -18,6 +22,7 @@
 - Fix bugged retry functionality [\#66](https://github.com/NASA-PDS/registry-sweepers/issues/66)
 - Empty write HTTP400 regression [\#64](https://github.com/NASA-PDS/registry-sweepers/issues/64)
 - Registry-Sweeper ECS Enchancements \(Pre Multi-Tenancy\) [\#59](https://github.com/NASA-PDS/registry-sweepers/issues/59)
+- Regularly synchronize the legacy registry collections on Solr in the registry in opensearch [\#58](https://github.com/NASA-PDS/registry-sweepers/issues/58)
 - Remedy absent retry-behaviour [\#56](https://github.com/NASA-PDS/registry-sweepers/issues/56)
 - Remediate findings from Provenance Script Testing [\#55](https://github.com/NASA-PDS/registry-sweepers/issues/55)
 - Create registry-sweeper cluster and deploy/schedule the tasks [\#52](https://github.com/NASA-PDS/registry-sweepers/issues/52)
