@@ -18,7 +18,14 @@ def get_opensearch_client_from_environment(verify_certs: bool = True) -> OpenSea
 
 
 def get_opensearch_client(endpoint_url: str, username: str, password: str, verify_certs: bool = True) -> OpenSearch:
-    scheme, host, port = endpoint_url.replace("://", ":", 1).split(":")
+    try:
+        scheme, host, port_str = endpoint_url.replace("://", ":", 1).split(":")
+        port = int(port_str)
+    except ValueError:
+        raise ValueError(
+            f'Failed to parse (scheme, host, port) from endpoint value - expected value of form <scheme>://<host>:<port> (got "{endpoint_url}")'
+        )
+
     use_ssl = scheme.lower() == "https"
     auth = (username, password)
 
