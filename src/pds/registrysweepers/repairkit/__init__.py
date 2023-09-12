@@ -69,7 +69,7 @@ def generate_updates(
                         repairs.update(func(src, fieldname))
 
         if repairs:
-            log.info(f"Writing repairs to document: {id}")
+            log.debug(f"Writing repairs to document: {id}")
             yield Update(id=id, content=repairs)
 
 
