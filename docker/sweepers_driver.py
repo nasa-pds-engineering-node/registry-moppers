@@ -56,13 +56,14 @@
 
 import functools
 import inspect
+import argparse
 import json
 import logging
 import os
 from datetime import datetime
 from typing import Callable
 
-from pds.registrysweepers import provenance, ancestry, repairkit
+from pds.registrysweepers import provenance, ancestry, repairkit, legacy_registry_sync
 from pds.registrysweepers.utils import configure_logging, parse_log_level
 from pds.registrysweepers.utils.db.client import get_opensearch_client_from_environment
 from pds.registrysweepers.utils.misc import get_human_readable_elapsed_since
@@ -107,12 +108,30 @@ def run_factory(sweeper_f: Callable) -> Callable:
     )
 
 
-# Define sweepers to be run here, in order of execution
+parser = argparse.ArgumentParser(
+    prog='registry-sweepers',
+    description='sweeps the PDS registry with different routines meant to run regularly on the database'
+)
+
+# define optional sweepers
+parser.add_argument('--legacy-sync', action='store_true')
+optional_sweepers = {
+    'legacy_sync': legacy_registry_sync.run
+}
+
+args = parser.parse_args()
+
+
+# Define default sweepers to be run here, in order of execution
 sweepers = [
     repairkit.run,
     provenance.run,
     ancestry.run
 ]
+
+for option, sweeper in optional_sweepers.items():
+    if getattr(args, option):
+        sweepers.append(sweeper)
 
 sweeper_descriptions = [inspect.getmodule(f).__name__ for f in sweepers]
 log.info(f'Running sweepers: {sweeper_descriptions}')
