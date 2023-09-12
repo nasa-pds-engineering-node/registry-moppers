@@ -53,7 +53,6 @@ from pds.registrysweepers.utils import parse_args
 from pds.registrysweepers.utils.db import get_extant_lidvids
 from pds.registrysweepers.utils.db import write_updated_docs
 from pds.registrysweepers.utils.db.client import get_opensearch_client
-from pds.registrysweepers.utils.db.host import Host
 from pds.registrysweepers.utils.db.update import Update
 
 log = logging.getLogger(__name__)

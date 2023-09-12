@@ -8,7 +8,6 @@ from typing import Tuple
 from pds.registrysweepers import ancestry
 from pds.registrysweepers.ancestry import AncestryRecord
 from pds.registrysweepers.ancestry import get_collection_ancestry_records
-from pds.registrysweepers.utils.db.host import Host
 from pds.registrysweepers.utils.productidentifiers.pdslidvid import PdsLidVid
 
 from tests.mocks.registryquerymock import RegistryQueryMock
@@ -282,9 +281,8 @@ class AncestryLegacyTypesTestCase(unittest.TestCase):
     registry_query_mock = RegistryQueryMock(input_file_path)
 
     def test_collection_refs_parsing(self):
-        host_stub = Host(None, None, None, None)
         query_mock_f = self.registry_query_mock.get_mocked_query
-        collection_ancestry_records = list(get_collection_ancestry_records(host_stub, query_mock_f))
+        collection_ancestry_records = list(get_collection_ancestry_records(None, query_mock_f))
 
         self.assertEqual(1, len(collection_ancestry_records))
 

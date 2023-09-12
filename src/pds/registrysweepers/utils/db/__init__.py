@@ -1,9 +1,6 @@
-import functools
 import json
 import logging
 import sys
-import urllib.parse
-from datetime import timedelta
 from typing import Callable
 from typing import Dict
 from typing import Iterable
@@ -11,12 +8,9 @@ from typing import List
 from typing import Mapping
 from typing import Optional
 
-import requests
 from opensearchpy import OpenSearch
-from pds.registrysweepers.utils.db.host import Host
 from pds.registrysweepers.utils.db.update import Update
 from pds.registrysweepers.utils.misc import get_random_hex_id
-from requests import HTTPError
 from retry import retry
 from retry.api import retry_call
 
@@ -39,6 +33,7 @@ def query_registry_db(
     """
 
     scroll_keepalive = f"{scroll_keepalive_minutes}m"
+    request_timeout = 20
     query_id = get_random_hex_id()  # This is just used to differentiate queries during logging
     log.info(f"Initiating query with id {query_id}: {query}")
 
@@ -57,6 +52,7 @@ def query_registry_db(
                     index=index_name,
                     body=query,
                     scroll=scroll_keepalive,
+                    request_timeout=request_timeout,
                     size=page_size,
                     _source_includes=_source.get("includes", []),  # TODO: Break out from the enclosing _source object
                     _source_excludes=_source.get("excludes", []),  # TODO: Break out from the enclosing _source object
@@ -65,7 +61,7 @@ def query_registry_db(
         else:
 
             def fetch_func(_scroll_id: str = scroll_id):
-                return client.scroll(scroll_id=_scroll_id, scroll=scroll_keepalive)
+                return client.scroll(scroll_id=_scroll_id, scroll=scroll_keepalive, request_timeout=request_timeout)
 
         results = retry_call(
             fetch_func,
@@ -97,7 +93,7 @@ def query_registry_db(
         # expected total hits value.
         # TODO: Remove this upon implementation of https://github.com/NASA-PDS/registry-sweepers/issues/42
         hits_data_present_in_response = len(response_hits) > 0
-        if not hits_data_present_in_response:
+        if not hits_data_present_in_response and served_hits < total_hits:
             log.error(
                 f"Response for query {query_id} contained no hits when hits were expected.  Returned data is incomplete (got {served_hits} of {total_hits} total hits).  Response was: {results}"
             )
@@ -180,7 +176,8 @@ def update_as_statements(update: Update) -> Iterable[str]:
 def _write_bulk_updates_chunk(client: OpenSearch, index_name: str, bulk_updates: Iterable[str]):
     bulk_data = "\n".join(bulk_updates) + "\n"
 
-    response_content = client.bulk(index=index_name, body=bulk_data)
+    request_timeout = 60
+    response_content = client.bulk(index=index_name, body=bulk_data, request_timeout=request_timeout)
 
     if response_content.get("errors"):
         warn_types = {"document_missing_exception"}  # these types represent bad data, not bad sweepers behaviour
