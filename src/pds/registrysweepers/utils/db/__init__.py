@@ -7,6 +7,7 @@ from typing import Iterable
 from typing import List
 from typing import Mapping
 from typing import Optional
+from typing import Union
 
 from opensearchpy import OpenSearch
 from pds.registrysweepers.utils.db.update import Update
@@ -137,7 +138,7 @@ def write_updated_docs(
     client: OpenSearch,
     updates: Iterable[Update],
     index_name: str = "registry",
-    bulk_chunk_max_update_count: int | None = None,
+    bulk_chunk_max_update_count: Union[int, None] = None,
 ):
     log.info("Updating a lazily-generated collection of product documents...")
     updated_doc_count = 0
