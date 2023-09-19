@@ -176,7 +176,7 @@ def get_nonaggregate_ancestry_records(
                 'Failed to parse collection and/or product LIDVIDs from document in index "%s" with id "%s" due to %s: %s',
                 doc.get("_index"),
                 doc.get("_id"),
-                type(err),
+                type(err).__name__,
                 err,
             )
             continue
