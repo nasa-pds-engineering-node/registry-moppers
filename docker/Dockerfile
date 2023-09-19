@@ -40,7 +40,7 @@
 # -----
 #
 # We use a slim python-enabled base image.
-FROM python:3.10-slim-bullseye
+FROM python:3.9-slim-bullseye
 
 ENV INSTALL_WORKDIR=/tmp/registry-sweepers
 
