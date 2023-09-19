@@ -57,6 +57,8 @@ def generate_updates(
     docs: Iterable[Dict], repairkit_version_metadata_key: str, repairkit_version: int
 ) -> Iterable[Update]:
     """Lazily generate necessary Update objects for a collection of db documents"""
+    repair_already_logged_to_error = False
+
     for document in docs:
         id = document["_id"]
         src = document["_source"]
@@ -68,9 +70,13 @@ def generate_updates(
                     for func in funcs:
                         repairs.update(func(src, fieldname))
 
-        if repairs:
-            log.debug(f"Writing repairs to document: {id}")
-            yield Update(id=id, content=repairs)
+        document_needed_fixing = len(set(repairs).difference({repairkit_version_metadata_key})) > 0
+        if document_needed_fixing and not repair_already_logged_to_error:
+            log.error(
+                "repairkit sweeper detects documents in need of repair - please ~harass~ *request* node user to update their harvest version"
+            )
+            repair_already_logged_to_error = True
+        yield Update(id=id, content=repairs)
 
 
 def run(
