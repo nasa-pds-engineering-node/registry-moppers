@@ -131,7 +131,12 @@ def query_registry_db_or_mock(mock_f: Optional[Callable[[str], Iterable[Dict]]],
         return query_registry_db
 
 
-def write_updated_docs(client: OpenSearch, updates: Iterable[Update], index_name: str = "registry"):
+def write_updated_docs(
+    client: OpenSearch,
+    updates: Iterable[Update],
+    index_name: str = "registry",
+    bulk_chunk_max_update_count: int | None = None,
+):
     log.info("Updating a lazily-generated collection of product documents...")
     updated_doc_count = 0
 
@@ -139,8 +144,17 @@ def write_updated_docs(client: OpenSearch, updates: Iterable[Update], index_name
     bulk_buffer_size_mb = 0.0
     bulk_updates_buffer: List[str] = []
     for update in updates:
-        if bulk_buffer_size_mb > bulk_buffer_max_size_mb:
-            pending_product_count = int(len(bulk_updates_buffer) / 2)
+        buffered_updates_count = len(bulk_updates_buffer) // 2
+        buffer_at_size_threshold = bulk_buffer_size_mb >= bulk_buffer_max_size_mb
+        buffer_at_update_count_threshold = (
+            bulk_chunk_max_update_count is not None and buffered_updates_count >= bulk_chunk_max_update_count
+        )
+        flush_threshold_reached = buffer_at_size_threshold or buffer_at_update_count_threshold
+        threshold_log_str = (
+            f"{bulk_buffer_max_size_mb}MB" if buffer_at_size_threshold else f"{bulk_chunk_max_update_count}docs"
+        )
+
+        if flush_threshold_reached:
             log.info(
                 f"Bulk update buffer has reached {bulk_buffer_max_size_mb}MB threshold - writing {pending_product_count} document updates to db..."
             )

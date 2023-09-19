@@ -89,10 +89,12 @@ def run(
         }
     }
 
-    all_docs = query_registry_db(client, unprocessed_docs_query, {})
+    # page_size and bulk_chunk_max_update_count constraints are necessary to avoid choking nodes with very-large docs
+    # i.e. ATM and GEO
+    all_docs = query_registry_db(client, unprocessed_docs_query, {}, page_size=1000)
     updates = generate_updates(all_docs, repairkit_version_metadata_key, SWEEPERS_REPAIRKIT_VERSION)
     ensure_index_mapping(client, "registry", repairkit_version_metadata_key, "integer")
-    write_updated_docs(client, updates)
+    write_updated_docs(client, updates, bulk_chunk_max_update_count=20000)
 
     log.info("Repairkit sweeper processing complete!")
 
