@@ -1,6 +1,6 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2023-09-12)
+## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2023-09-19)
 
 [Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/v1.0.0...«unknown»)
 
@@ -19,8 +19,10 @@
 
 **Other closed issues:**
 
+- Standardize CICD on python 3.9 [\#78](https://github.com/NASA-PDS/registry-sweepers/issues/78)
 - Fix bugged retry functionality [\#66](https://github.com/NASA-PDS/registry-sweepers/issues/66)
 - Empty write HTTP400 regression [\#64](https://github.com/NASA-PDS/registry-sweepers/issues/64)
+- Deploy repairkit sweeper to delta and prod [\#61](https://github.com/NASA-PDS/registry-sweepers/issues/61)
 - Registry-Sweeper ECS Enchancements \(Pre Multi-Tenancy\) [\#59](https://github.com/NASA-PDS/registry-sweepers/issues/59)
 - Regularly synchronize the legacy registry collections on Solr in the registry in opensearch [\#58](https://github.com/NASA-PDS/registry-sweepers/issues/58)
 - Remedy absent retry-behaviour [\#56](https://github.com/NASA-PDS/registry-sweepers/issues/56)
