@@ -57,6 +57,8 @@ def generate_updates(
     docs: Iterable[Dict], repairkit_version_metadata_key: str, repairkit_version: int
 ) -> Iterable[Update]:
     """Lazily generate necessary Update objects for a collection of db documents"""
+    repair_already_logged_to_error = False
+
     for document in docs:
         id = document["_id"]
         src = document["_source"]
@@ -68,9 +70,13 @@ def generate_updates(
                     for func in funcs:
                         repairs.update(func(src, fieldname))
 
-        if repairs:
-            log.debug(f"Writing repairs to document: {id}")
-            yield Update(id=id, content=repairs)
+        document_needed_fixing = len(set(repairs).difference({repairkit_version_metadata_key})) > 0
+        if document_needed_fixing and not repair_already_logged_to_error:
+            log.error(
+                "repairkit sweeper detects documents in need of repair - please ~harass~ *request* node user to update their harvest version"
+            )
+            repair_already_logged_to_error = True
+        yield Update(id=id, content=repairs)
 
 
 def run(
@@ -89,10 +95,12 @@ def run(
         }
     }
 
-    all_docs = query_registry_db(client, unprocessed_docs_query, {})
+    # page_size and bulk_chunk_max_update_count constraints are necessary to avoid choking nodes with very-large docs
+    # i.e. ATM and GEO
+    all_docs = query_registry_db(client, unprocessed_docs_query, {}, page_size=1000)
     updates = generate_updates(all_docs, repairkit_version_metadata_key, SWEEPERS_REPAIRKIT_VERSION)
     ensure_index_mapping(client, "registry", repairkit_version_metadata_key, "integer")
-    write_updated_docs(client, updates)
+    write_updated_docs(client, updates, bulk_chunk_max_update_count=20000)
 
     log.info("Repairkit sweeper processing complete!")
 
