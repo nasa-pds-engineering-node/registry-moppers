@@ -35,7 +35,7 @@ def query_registry_db(
     scroll_keepalive = f"{scroll_keepalive_minutes}m"
     request_timeout = 20
     query_id = get_random_hex_id()  # This is just used to differentiate queries during logging
-    log.info(f"Initiating query with id {query_id}: {query}")
+    log.info(f"Initiating query with id {query_id}: {json.dumps(query)}")
 
     served_hits = 0
 
