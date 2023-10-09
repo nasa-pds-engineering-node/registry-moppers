@@ -1,8 +1,12 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2023-09-19)
+## [release/1.2.0](https://github.com/NASA-PDS/registry-sweepers/tree/release/1.2.0) (2023-10-06)
 
-[Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/v1.0.0...«unknown»)
+[Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/release/1.1.0...release/1.2.0)
+
+## [release/1.1.0](https://github.com/NASA-PDS/registry-sweepers/tree/release/1.1.0) (2023-10-06)
+
+[Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/v1.0.0...release/1.1.0)
 
 **Improvements:**
 
@@ -20,6 +24,7 @@
 **Other closed issues:**
 
 - Standardize CICD on python 3.9 [\#78](https://github.com/NASA-PDS/registry-sweepers/issues/78)
+- Registry-Sweepers Error: contained no hits when hits were expected [\#69](https://github.com/NASA-PDS/registry-sweepers/issues/69) [[s.high](https://github.com/NASA-PDS/registry-sweepers/labels/s.high)]
 - Fix bugged retry functionality [\#66](https://github.com/NASA-PDS/registry-sweepers/issues/66)
 - Empty write HTTP400 regression [\#64](https://github.com/NASA-PDS/registry-sweepers/issues/64)
 - Deploy repairkit sweeper to delta and prod [\#61](https://github.com/NASA-PDS/registry-sweepers/issues/61)
