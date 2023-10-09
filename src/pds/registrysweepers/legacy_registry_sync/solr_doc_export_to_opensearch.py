@@ -115,6 +115,6 @@ class SolrOsWrapperIter:
         while True:
             try:
                 doc = next(self.solr_itr)
-                return self.solrDoc_to_osDoc(doc)
+                return self.solr_doc_to_os_doc(doc)
             except MissingIdentifierError as e:
                 log.warning(str(e))
