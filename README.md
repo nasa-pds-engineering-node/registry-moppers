@@ -25,6 +25,16 @@ LOGLEVEL - an integer log level or anycase string matching a python log level li
 DEV_MODE=1  // disables host verification
 ```
 
+With `--legacy-sync` option, you also need the list of the cross-cluster-search node configured to access all the node's OpensSearch domains:
+
+```
+CCS_CONN=naif-prod-ccs,rms-prod,sbnumd-prod-ccs,geo-prod-ccs,atm-prod-ccs,sbnpsi-prod-ccs,ppi-prod-ccs,img-prod-ccs
+```
+
+Use the connection aliases found in the 'Connections' tab of the Engineering Node OpenSearch Domain on AWS.
+
+https://us-west-2.console.aws.amazon.com/aos/home?region=us-west-2#opensearch/domains/en-prod?tabId=ccs
+
 After cloning the repository, and setting the repository root as the current working directory install the package with `pip install -e .`
 
 The wrapper script for the suite of components may be run with `python ./docker/sweepers_driver.py`

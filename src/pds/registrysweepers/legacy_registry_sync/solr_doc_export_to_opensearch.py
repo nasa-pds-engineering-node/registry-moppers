@@ -93,10 +93,11 @@ class SolrOsWrapperIter:
 
                 # validate dates
                 try:
-                    datetime.fromisoformat(v[0].replace("Z", ""))
+                    v = [datetime.fromisoformat(v[0].replace("Z", ""))]
                     new_doc["_source"][k] = v
                 except ValueError:
-                    log.warning("Date %s for field %s is invalid", v, k)
+                    log.warning("Date %s for field %s is invalid, assign default datetime 01-01-1950 instead", v, k)
+                    new_doc["_source"][k] = [datetime(1950, 1, 1, 0, 0, 0)]
             elif "year" in k:
                 if len(v[0]) > 0:
                     new_doc["_source"][k] = v
@@ -105,10 +106,15 @@ class SolrOsWrapperIter:
             else:
                 new_doc["_source"][k] = v
 
+        # add modification date because kibana needs it for its time field
+        if "modification_date" not in new_doc["_source"]:
+            new_doc["_source"]["modification_date"] = [datetime(1950, 1, 1, 0, 0, 0)]
+
         if self.id_field_fun:
             id = self.id_field_fun(doc)
             new_doc["_id"] = id
             new_doc["_source"]["found_in_registry"] = "true" if id in self.found_ids else "false"
+
         return new_doc
 
     def __next__(self):
