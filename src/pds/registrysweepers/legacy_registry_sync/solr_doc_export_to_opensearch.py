@@ -16,6 +16,8 @@ NODE_FOLDERS = {
     "sbn": "PDS_SBN",
 }
 
+DEFAULT_MODIFICATION_DATE = datetime(1950, 1, 1, 0, 0, 0)
+
 
 class MissingIdentifierError(Exception):
     pass
@@ -108,7 +110,7 @@ class SolrOsWrapperIter:
 
         # add modification date because kibana needs it for its time field
         if "modification_date" not in new_doc["_source"]:
-            new_doc["_source"]["modification_date"] = [datetime(1950, 1, 1, 0, 0, 0)]
+            new_doc["_source"]["modification_date"] = [DEFAULT_MODIFICATION_DATE]
 
         if self.id_field_fun:
             id = self.id_field_fun(doc)
