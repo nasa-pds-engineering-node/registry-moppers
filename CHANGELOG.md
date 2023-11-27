@@ -1,5 +1,13 @@
 # Changelog
 
+## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2023-11-27)
+
+[Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/v1.2.0...«unknown»)
+
+**Other closed issues:**
+
+- ensure ancestry metadata key presence in index [\#83](https://github.com/NASA-PDS/registry-sweepers/issues/83)
+
 ## [v1.2.0](https://github.com/NASA-PDS/registry-sweepers/tree/v1.2.0) (2023-10-09)
 
 [Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/v1.0.0...v1.2.0)
