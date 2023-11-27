@@ -2,11 +2,7 @@
 
 ## [v1.2.0](https://github.com/NASA-PDS/registry-sweepers/tree/v1.2.0) (2023-10-09)
 
-[Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/release/1.1.0...v1.2.0)
-
-## [release/1.1.0](https://github.com/NASA-PDS/registry-sweepers/tree/release/1.1.0) (2023-10-06)
-
-[Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/v1.0.0...release/1.1.0)
+[Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/v1.0.0...v1.2.0)
 
 **Improvements:**
 
