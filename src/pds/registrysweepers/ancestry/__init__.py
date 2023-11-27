@@ -18,6 +18,7 @@ from pds.registrysweepers.utils import configure_logging
 from pds.registrysweepers.utils import parse_args
 from pds.registrysweepers.utils.db import write_updated_docs
 from pds.registrysweepers.utils.db.client import get_opensearch_client
+from pds.registrysweepers.utils.db.indexing import ensure_index_mapping
 from pds.registrysweepers.utils.db.update import Update
 
 log = logging.getLogger(__name__)
@@ -46,6 +47,10 @@ def run(
     updates = generate_updates(ancestry_records, ancestry_records_accumulator, bulk_updates_sink)
 
     if bulk_updates_sink is None:
+        log.info("Ensuring metadata keys are present in database index...")
+        for metadata_key in [METADATA_PARENT_BUNDLE_KEY, METADATA_PARENT_COLLECTION_KEY]:
+            ensure_index_mapping(client, "registry", metadata_key, "keyword")
+
         log.info("Writing bulk updates to database...")
         write_updated_docs(client, updates)
     else:
