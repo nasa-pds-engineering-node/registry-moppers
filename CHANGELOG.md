@@ -1,8 +1,12 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2023-11-27)
+## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2023-12-06)
 
 [Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/v1.2.0...«unknown»)
+
+**Defects:**
+
+- Property values returned by the API are inconsistent, as list or single value. [\#86](https://github.com/NASA-PDS/registry-sweepers/issues/86) [[s.high](https://github.com/NASA-PDS/registry-sweepers/labels/s.high)]
 
 **Other closed issues:**
 
