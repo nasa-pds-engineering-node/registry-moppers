@@ -73,9 +73,9 @@ def generate_updates(
                     for func in funcs:
                         repairs.update(func(src, fieldname))
 
-                # TODO: remove me once applied -- edunn 20231206
-                if fieldname in temporary_fix_targets:
-                    repairs.update(allarrays.apply_reversion_fix(src, fieldname))
+            # TODO: remove me once applied -- edunn 20231206
+            if fieldname in temporary_fix_targets:
+                repairs.update(allarrays.apply_reversion_fix(src, fieldname))
 
         document_needed_fixing = len(set(repairs).difference({repairkit_version_metadata_key})) > 0
         if document_needed_fixing and not repair_already_logged_to_error:
