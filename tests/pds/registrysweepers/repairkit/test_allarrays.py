@@ -26,13 +26,14 @@ class AllArrays(unittest.TestCase):
             "ops:Provenance/ops:parent_bundle_identifier": ["urn:nasa:pds:clementine_lwir_bt::1.0"],
             "ops:Provenance/ops:registry_sweepers_repairkit_version": 2,
             "ops:Provenance/someStringTypedProp": "someValue",
+            "ops:Tracking_Meta/ops:archive_status": "archived",
         }
 
         repairs = {}
 
         for fieldname in src:
-            if fieldname in allarrays.EXCLUDED_PROPERTIES:
-                repairs.update(allarrays.apply_reversion_fix(src, fieldname))
+            if fieldname not in allarrays.EXCLUDED_PROPERTIES:
+                repairs.update(allarrays.repair(src, fieldname))
 
         self.assertDictEqual({}, repairs, "test that excluded (string-typed) fields do not result in repair changes")
 
