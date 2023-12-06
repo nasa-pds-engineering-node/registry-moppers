@@ -5,6 +5,7 @@ are needed in the future. They can be added by updating the REPAIR_TOOLS mapping
 with the new field name and functional requirements. All the additions can then
 be modules with this executable package.
 """
+import collections
 import logging
 import re
 from typing import Dict
@@ -51,6 +52,9 @@ REPAIR_TOOLS = {
 
 log = logging.getLogger(__name__)
 
+# TODO: remove me once applied to prod -- edunn 20231206
+temporary_fix_targets = allarrays.EXCLUDED_PROPERTIES
+
 
 def generate_updates(
     docs: Iterable[Dict], repairkit_version_metadata_key: str, repairkit_version: int
@@ -68,6 +72,10 @@ def generate_updates(
                 if regex(fieldname):
                     for func in funcs:
                         repairs.update(func(src, fieldname))
+
+                # TODO: remove me once applied -- edunn 20231206
+                if fieldname in temporary_fix_targets:
+                    repairs.update(allarrays.apply_reversion_fix(src, fieldname))
 
         document_needed_fixing = len(set(repairs).difference({repairkit_version_metadata_key})) > 0
         if document_needed_fixing and not repair_already_logged_to_error:
