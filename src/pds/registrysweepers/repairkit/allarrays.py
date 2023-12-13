@@ -27,15 +27,3 @@ def repair(document: Dict, fieldname: str) -> Dict:
         log.debug(f"found string for {fieldname} where it should be an array")
         return {fieldname: [document[fieldname]]}
     return {}
-
-
-# TODO: remove me once applied to prod -- edunn 20231206
-def apply_reversion_fix(document: Dict, fieldname: str) -> Dict:
-    src_val = document[fieldname]
-    if isinstance(src_val, list) and len(src_val) == 1:
-        return {fieldname: src_val[0]}
-    else:
-        log.error(
-            f'Unexpected situation when applying reversion fix: Expected single-element array, got {src_val}, when targeting "{fieldname}" in {json.dumps(document)}'
-        )
-    return {}
