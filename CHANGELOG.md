@@ -1,6 +1,6 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2023-12-06)
+## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2023-12-14)
 
 [Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/v1.2.0...«unknown»)
 
@@ -11,6 +11,7 @@
 **Other closed issues:**
 
 - ensure ancestry metadata key presence in index [\#83](https://github.com/NASA-PDS/registry-sweepers/issues/83)
+- registry-sweeper deployment on AWS \(prod\) [\#17](https://github.com/NASA-PDS/registry-sweepers/issues/17)
 
 ## [v1.2.0](https://github.com/NASA-PDS/registry-sweepers/tree/v1.2.0) (2023-10-09)
 
