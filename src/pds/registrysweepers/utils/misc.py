@@ -2,7 +2,9 @@ import random
 from datetime import datetime
 from typing import Any
 from typing import Callable
+from typing import Iterable
 from typing import List
+from typing import TypeVar
 
 
 def coerce_list_type(db_value: Any) -> List[Any]:
@@ -51,3 +53,23 @@ def auto_raise_for_status(f: Callable) -> Callable:
 
 def get_sweeper_version_metadata_key(sweeper_name: str) -> str:
     return f"ops:Provenance/ops:registry_sweepers_{sweeper_name}_version"
+
+
+T = TypeVar("T")
+
+
+def iterate_pages_of(page_size: int, iterable: Iterable[T]) -> Iterable[List[T]]:
+    """Provides a simple interface for lazily iterating over pages of an arbitrary iterable"""
+    if page_size < 1:
+        raise ValueError(f"Cannot iterate over pages of size <1 (got {page_size})")
+
+    page: List[T] = []
+    for el in iterable:
+        if len(page) == page_size:
+            yield page
+            page = []
+
+        page.append(el)
+
+    if len(page) > 0:
+        yield page
