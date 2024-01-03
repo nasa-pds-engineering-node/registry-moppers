@@ -1,9 +1,13 @@
 import logging
+import os
+import shutil
+import tempfile
 from typing import Dict
 from typing import Iterable
 from typing import List
 from typing import Mapping
 from typing import Set
+from typing import Union
 
 from opensearchpy import OpenSearch
 from pds.registrysweepers.ancestry.ancestryrecord import AncestryRecord
@@ -12,7 +16,13 @@ from pds.registrysweepers.ancestry.queries import get_bundle_ancestry_records_qu
 from pds.registrysweepers.ancestry.queries import get_collection_ancestry_records_bundles_query
 from pds.registrysweepers.ancestry.queries import get_collection_ancestry_records_collections_query
 from pds.registrysweepers.ancestry.queries import get_nonaggregate_ancestry_records_query
+from pds.registrysweepers.ancestry.utils import dump_history_to_disk
+from pds.registrysweepers.ancestry.utils import load_partial_history_to_records
+from pds.registrysweepers.ancestry.utils import make_history_serializable
+from pds.registrysweepers.ancestry.utils import merge_matching_history_chunks
+from pds.registrysweepers.ancestry.utils import produce_nonaggregate_iterable
 from pds.registrysweepers.utils.misc import coerce_list_type
+from pds.registrysweepers.utils.misc import iterate_pages_of
 from pds.registrysweepers.utils.productidentifiers.factory import PdsProductIdentifierFactory
 from pds.registrysweepers.utils.productidentifiers.pdslid import PdsLid
 from pds.registrysweepers.utils.productidentifiers.pdslidvid import PdsLidVid
@@ -162,26 +172,19 @@ def get_nonaggregate_ancestry_records(
         record.lidvid: record.parent_bundle_lidvids for record in collection_ancestry_records
     }
 
+    on_disk_cache_dir = tempfile.mkdtemp(prefix="ancestry-cache_")
+    log.info(f"caching partial non-aggregate ancestry result-sets to {on_disk_cache_dir}")
+
     collection_refs_query_docs = get_nonaggregate_ancestry_records_query(client, registry_db_mock)
 
-    nonaggregate_ancestry_records_by_lidvid = {}
-    # For each collection, add the collection and its bundle ancestry to all products the collection contains
-    for doc in collection_refs_query_docs:
-        try:
-            collection_lidvid = PdsLidVid.from_string(doc["_source"]["collection_lidvid"])
-            bundle_ancestry = bundle_ancestry_by_collection_lidvid[collection_lidvid]
-            nonaggregate_lidvids = [PdsLidVid.from_string(s) for s in doc["_source"]["product_lidvid"]]
-        except (ValueError, KeyError) as err:
-            log.warning(
-                'Failed to parse collection and/or product LIDVIDs from document in index "%s" with id "%s" due to %s: %s',
-                doc.get("_index"),
-                doc.get("_id"),
-                type(err).__name__,
-                err,
-            )
-            continue
+    for prepared_nonagg_doc_page in iterate_pages_of(500000, produce_nonaggregate_iterable(collection_refs_query_docs)):
+        nonaggregate_ancestry_records_by_lidvid = {}
 
-        for lidvid in nonaggregate_lidvids:
+        for doc in prepared_nonagg_doc_page:
+            lidvid = doc["nonaggregate_lidvid"]
+            collection_lidvid = doc["collection_lidvid"]
+            bundle_ancestry = bundle_ancestry_by_collection_lidvid[collection_lidvid]
+
             if lidvid not in nonaggregate_ancestry_records_by_lidvid:
                 nonaggregate_ancestry_records_by_lidvid[lidvid] = AncestryRecord(lidvid=lidvid)
 
@@ -189,4 +192,17 @@ def get_nonaggregate_ancestry_records(
             record.parent_bundle_lidvids.update(bundle_ancestry)
             record.parent_collection_lidvids.add(collection_lidvid)
 
-    return nonaggregate_ancestry_records_by_lidvid.values()
+        serializable_history = make_history_serializable(nonaggregate_ancestry_records_by_lidvid)
+        dump_history_to_disk(on_disk_cache_dir, serializable_history)
+
+    remaining_chunk_filepaths = set(os.path.join(on_disk_cache_dir, fn) for fn in os.listdir(on_disk_cache_dir))
+    while len(remaining_chunk_filepaths) > 0:
+        active_filepath = remaining_chunk_filepaths.pop()
+        merge_matching_history_chunks(active_filepath, remaining_chunk_filepaths)
+
+        records_from_file = load_partial_history_to_records(active_filepath)
+        for record in records_from_file:
+            yield record
+        os.remove(active_filepath)  # clean it up to give an indication of progress
+
+    shutil.rmtree(on_disk_cache_dir)
