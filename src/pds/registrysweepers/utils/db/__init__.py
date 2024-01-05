@@ -25,6 +25,7 @@ def query_registry_db(
     index_name: str = "registry",
     page_size: int = 10000,
     scroll_keepalive_minutes: int = 10,
+    request_timeout_seconds: int = 20,
 ) -> Iterable[Dict]:
     """
     Given an OpenSearch client and query/_source, return an iterable collection of hits
@@ -34,7 +35,6 @@ def query_registry_db(
     """
 
     scroll_keepalive = f"{scroll_keepalive_minutes}m"
-    request_timeout = 20
     query_id = get_random_hex_id()  # This is just used to differentiate queries during logging
     log.info(f"Initiating query with id {query_id}: {json.dumps(query)}")
 
@@ -53,7 +53,7 @@ def query_registry_db(
                     index=index_name,
                     body=query,
                     scroll=scroll_keepalive,
-                    request_timeout=request_timeout,
+                    request_timeout=request_timeout_seconds,
                     size=page_size,
                     _source_includes=_source.get("includes", []),  # TODO: Break out from the enclosing _source object
                     _source_excludes=_source.get("excludes", []),  # TODO: Break out from the enclosing _source object
@@ -62,7 +62,9 @@ def query_registry_db(
         else:
 
             def fetch_func(_scroll_id: str = scroll_id):
-                return client.scroll(scroll_id=_scroll_id, scroll=scroll_keepalive, request_timeout=request_timeout)
+                return client.scroll(
+                    scroll_id=_scroll_id, scroll=scroll_keepalive, request_timeout=request_timeout_seconds
+                )
 
         results = retry_call(
             fetch_func,
