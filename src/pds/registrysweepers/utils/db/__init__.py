@@ -36,7 +36,7 @@ def query_registry_db(
 
     scroll_keepalive = f"{scroll_keepalive_minutes}m"
     query_id = get_random_hex_id()  # This is just used to differentiate queries during logging
-    log.info(f"Initiating query with id {query_id}: {json.dumps(query)}")
+    log.info(f"Initiating query (id {query_id}) of index {index_name}: {json.dumps(query)}")
 
     served_hits = 0
 
@@ -118,7 +118,103 @@ def query_registry_db(
     log.info(f"Query {query_id} complete!")
 
 
-def query_registry_db_or_mock(mock_f: Optional[Callable[[str], Iterable[Dict]]], mock_query_id: str):
+def query_registry_db_with_search_after(
+    client: OpenSearch,
+    query: Dict,
+    _source: Dict,
+    index_name: str = "registry",
+    page_size: int = 10000,
+    sort_fields: List[str] = None,
+    request_timeout_seconds: int = 20,
+) -> Iterable[Dict]:
+    """
+    Given an OpenSearch client and query/_source, return an iterable collection of hits
+
+    Example query: {"query: {"bool": {"must": [{"terms": {"ops:Tracking_Meta/ops:archive_status": ["archived", "certified"]}}]}}}
+    Example _source: {"includes": ["lidvid"]}
+    """
+
+    # Use 'lidvid' by default, though this may cause problems later as it may not exist for all documents - edunn 20230105
+    # it is not recommended to use _id per https://www.elastic.co/guide/en/elasticsearch/reference/6.8/search-request-search-after.html
+    # (see first !IMPORTANT! note)
+    sort_fields = sort_fields or ["lidvid"]
+
+    query_id = get_random_hex_id()  # This is just used to differentiate queries during logging
+    log.info(f"Initiating query with id {query_id}: {json.dumps(query)}")
+
+    served_hits = 0
+
+    last_info_log_at_percentage = 0
+    log.info(f"Query {query_id} progress: 0%")
+
+    more_data_exists = True
+    search_after_values: Union[List, None] = None
+    while more_data_exists:
+        if search_after_values is not None:
+            query["search_after"] = search_after_values
+        log.info(
+            f"paging {page_size} hits with sort fields {sort_fields} and search-after values {search_after_values}"
+        )
+
+        def fetch_func():
+            return client.search(
+                index=index_name,
+                body=query,
+                request_timeout=request_timeout_seconds,
+                size=page_size,
+                sort=sort_fields,
+                _source_includes=_source.get("includes", []),  # TODO: Break out from the enclosing _source object
+                _source_excludes=_source.get("excludes", []),  # TODO: Break out from the enclosing _source object
+            )
+
+        results = retry_call(
+            fetch_func,
+            tries=6,
+            delay=2,
+            backoff=2,
+            logger=log,
+        )
+
+        total_hits = results["hits"]["total"]["value"]
+        if served_hits == 0:
+            log.info(f"Query {query_id} returns {total_hits} total hits")
+        log.debug(
+            f"   paging query {query_id} ({served_hits} to {min(served_hits + page_size, total_hits)} of {total_hits})"
+        )
+
+        response_hits = results["hits"]["hits"]
+        for hit in response_hits:
+            served_hits += 1
+
+            percentage_of_hits_served = int(served_hits / total_hits * 100)
+            if last_info_log_at_percentage is None or percentage_of_hits_served >= (last_info_log_at_percentage + 5):
+                last_info_log_at_percentage = percentage_of_hits_served
+                log.info(f"Query {query_id} progress: {percentage_of_hits_served}%")
+
+            yield hit
+
+            # simpler to set the value after every hit than worry about OBO errors detecting the last hit in the page
+            search_after_values = [hit["_source"].get(field) for field in sort_fields]
+
+        # This is a temporary, ad-hoc guard against empty/erroneous responses which do not return non-200 status codes.
+        # Previously, this has cause infinite loops in production due to served_hits sticking and never reaching the
+        # expected total hits value.
+        # TODO: Remove this upon implementation of https://github.com/NASA-PDS/registry-sweepers/issues/42
+        hits_data_present_in_response = len(response_hits) > 0
+        if not hits_data_present_in_response and served_hits < total_hits:
+            log.error(
+                f"Response for query {query_id} contained no hits when hits were expected.  Returned data is incomplete (got {served_hits} of {total_hits} total hits).  Response was: {results}"
+            )
+            break
+
+        more_data_exists = served_hits < results["hits"]["total"]["value"]
+
+    log.info(f"Query {query_id} complete!")
+
+
+def query_registry_db_or_mock(
+    mock_f: Optional[Callable[[str], Iterable[Dict]]], mock_query_id: str, use_search_after: bool = False
+):
     if mock_f is not None:
 
         def mock_wrapper(
@@ -128,10 +224,14 @@ def query_registry_db_or_mock(mock_f: Optional[Callable[[str], Iterable[Dict]]],
             index_name: str = "registry",
             page_size: int = 10000,
             scroll_validity_duration_minutes: int = 10,
+            request_timeout_seconds: int = 20,
+            sort_fields: List[str] = [],
         ) -> Iterable[Dict]:
             return mock_f(mock_query_id)  # type: ignore  # see None-check above
 
         return mock_wrapper
+    elif use_search_after:
+        return query_registry_db_with_search_after
     else:
         return query_registry_db
 
