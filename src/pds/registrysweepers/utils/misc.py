@@ -1,3 +1,4 @@
+import os
 import random
 from datetime import datetime
 from typing import Any
@@ -73,3 +74,18 @@ def iterate_pages_of(page_size: int, iterable: Iterable[T]) -> Iterable[List[T]]
 
     if len(page) > 0:
         yield page
+
+
+def parse_boolean_env_var(key: str) -> bool:
+    raw_value = os.environ.get(key)
+
+    valid_truthy_values = ["true", "True", "TRUE", "1"]
+    valid_falsy_values = ["false", "False", "FALSE", "0", ""]
+    if raw_value in valid_falsy_values or raw_value is None:
+        return False
+    elif raw_value in valid_truthy_values:
+        return True
+    else:
+        raise ValueError(
+            f'Could not parse valid boolean from env var "{key}" - expected {valid_truthy_values} for True or {valid_falsy_values} for False'
+        )
