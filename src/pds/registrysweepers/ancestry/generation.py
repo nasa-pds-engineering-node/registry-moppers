@@ -7,8 +7,8 @@ from typing import Iterable
 from typing import List
 from typing import Mapping
 from typing import Set
-from typing import Union
 
+import psutil
 from opensearchpy import OpenSearch
 from pds.registrysweepers.ancestry.ancestryrecord import AncestryRecord
 from pds.registrysweepers.ancestry.queries import DbMockTypeDef
@@ -23,7 +23,7 @@ from pds.registrysweepers.ancestry.utils import make_history_serializable
 from pds.registrysweepers.ancestry.utils import merge_matching_history_chunks
 from pds.registrysweepers.ancestry.utils import produce_nonaggregate_iterable
 from pds.registrysweepers.utils.misc import coerce_list_type
-from pds.registrysweepers.utils.misc import iterate_pages_of
+from pds.registrysweepers.utils.misc import iterate_pages_given
 from pds.registrysweepers.utils.productidentifiers.factory import PdsProductIdentifierFactory
 from pds.registrysweepers.utils.productidentifiers.pdslid import PdsLid
 from pds.registrysweepers.utils.productidentifiers.pdslidvid import PdsLidVid
@@ -234,13 +234,15 @@ def _get_nonaggregate_ancestry_records_with_chunking(
         on_disk_cache_dir = os.environ.get("TMP_OVERRIDE_DIR")
         os.makedirs(on_disk_cache_dir, exist_ok=True)
     else:
-        on_disk_cache_dir = tempfile.mkdtemp(prefix="ancestry-cache_")
-    log.info(f"caching partial non-aggregate ancestry result-sets to {on_disk_cache_dir}")
-
+        on_disk_cache_dir = tempfile.mkdtemp(prefix="ancestry-merge-dump_")
+    log.info(f"dumping partial non-aggregate ancestry result-sets to {on_disk_cache_dir}")
+    log.info(
+        f"dumps will trigger when memory usage reaches {AncestryRuntimeConstants.disk_dump_memory_percent_threshold}%"
+    )
     collection_refs_query_docs = get_nonaggregate_ancestry_records_query(client, registry_db_mock)
 
-    for prepared_nonagg_doc_page in iterate_pages_of(
-        AncestryRuntimeConstants.nonaggregate_records_disk_dump_threshold,
+    for prepared_nonagg_doc_page in iterate_pages_given(
+        lambda _: psutil.virtual_memory().percent < AncestryRuntimeConstants.disk_dump_memory_percent_threshold,
         produce_nonaggregate_iterable(collection_refs_query_docs),
     ):
         nonaggregate_ancestry_records_by_lidvid = {}

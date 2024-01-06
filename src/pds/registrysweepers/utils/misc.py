@@ -59,14 +59,24 @@ def get_sweeper_version_metadata_key(sweeper_name: str) -> str:
 T = TypeVar("T")
 
 
-def iterate_pages_of(page_size: int, iterable: Iterable[T]) -> Iterable[List[T]]:
+def iterate_pages_of_size(page_size: int, iterable: Iterable[T]) -> Iterable[List[T]]:
     """Provides a simple interface for lazily iterating over pages of an arbitrary iterable"""
     if page_size < 1:
         raise ValueError(f"Cannot iterate over pages of size <1 (got {page_size})")
 
+    return iterate_pages_given(lambda page: len(page) < page_size, iterable)
+
+
+def iterate_pages_given(build_page_while: Callable[[List[T]], bool], iterable: Iterable[T]) -> Iterable[List[T]]:
+    """
+    Given a condition f(active_page: List[T]) under which to continue accumulating elements into the active page, yield
+    pages of elements from the input iterable.  This exists to support behaviour like "continue building page while
+    sufficient memory is available".
+    """
+
     page: List[T] = []
     for el in iterable:
-        if len(page) == page_size:
+        if not build_page_while(page):
             yield page
             page = []
 
