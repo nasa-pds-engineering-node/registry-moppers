@@ -14,49 +14,25 @@ from pds.registrysweepers.utils.productidentifiers.pdslidvid import PdsLidVid
 log = logging.getLogger(__name__)
 
 
-def produce_nonaggregate_iterable(
-    collection_refs_query_docs: Iterable[Dict],
-) -> Iterable[Dict[str, PdsLidVid]]:
-    """
-    Given a set of collection-level docs returned from the registry-refs index, emit a doc for each non-aggregate
-     ref contained within, attaching the collection lidvid.
-    This exists so that it is possible to page over non-aggregate-level documents using a specified page size.
-    """
-
-    for doc in collection_refs_query_docs:
-        try:
-            collection_lidvid = PdsLidVid.from_string(doc["_source"]["collection_lidvid"])
-            for nonaggregate_lidvid_str in doc["_source"]["product_lidvid"]:
-                nonaggregate_lidvid = PdsLidVid.from_string(nonaggregate_lidvid_str)
-                yield {"collection_lidvid": collection_lidvid, "nonaggregate_lidvid": nonaggregate_lidvid}
-        except (ValueError, KeyError) as err:
-            log.warning(
-                'Failed to parse collection and/or product LIDVIDs from document in index "%s" with id "%s" due to %s: %s',
-                doc.get("_index"),
-                doc.get("_id"),
-                type(err).__name__,
-                err,
-            )
-            continue
-
-
 def make_history_serializable(history: Dict[PdsLidVid, AncestryRecord]) -> Dict[str, SerializableAncestryRecordTypeDef]:
     """Destructively convert history into something able to be dumped to JSON"""
+    log.debug(f"Converting history into serializable types...")
     serializable_history: Dict[str, SerializableAncestryRecordTypeDef] = {}
     for old_k in list(history.keys()):
         old_v = history.pop(old_k)
         new_k = str(old_k)
         new_v = old_v.to_dict()
         serializable_history[new_k] = new_v
-
+    log.debug("    complete!")
     return serializable_history
 
 
 def dump_history_to_disk(parent_dir: str, history: Dict[str, SerializableAncestryRecordTypeDef]):
     temp_fp = os.path.join(parent_dir, datetime.now().isoformat().replace(":", "-"))
-    log.info(f"Dumping history of {len(history)} products to {temp_fp} for later merging")
+    log.info(f"Dumping history to {temp_fp} for later merging...")
     with open(temp_fp, "w+") as outfile:
         json.dump(history, outfile)
+    log.debug("    complete!")
 
 
 def merge_matching_history_chunks(dest_fp: str, src_fps: Iterable[str]):
@@ -90,6 +66,8 @@ def merge_matching_history_chunks(dest_fp: str, src_fps: Iterable[str]):
     # Overwrite the content of the destination file with any remaining history not absorbed
     with open(dest_fp, "w+") as src_outfile:
         json.dump(dest_file_content, src_outfile)
+
+    log.debug("    complete!")
 
 
 def load_partial_history_to_records(fn: str) -> Iterable[AncestryRecord]:

@@ -21,9 +21,7 @@ from pds.registrysweepers.ancestry.utils import dump_history_to_disk
 from pds.registrysweepers.ancestry.utils import load_partial_history_to_records
 from pds.registrysweepers.ancestry.utils import make_history_serializable
 from pds.registrysweepers.ancestry.utils import merge_matching_history_chunks
-from pds.registrysweepers.ancestry.utils import produce_nonaggregate_iterable
 from pds.registrysweepers.utils.misc import coerce_list_type
-from pds.registrysweepers.utils.misc import iterate_pages_given
 from pds.registrysweepers.utils.productidentifiers.factory import PdsProductIdentifierFactory
 from pds.registrysweepers.utils.productidentifiers.pdslid import PdsLid
 from pds.registrysweepers.utils.productidentifiers.pdslidvid import PdsLidVid
@@ -240,27 +238,43 @@ def _get_nonaggregate_ancestry_records_with_chunking(
         f"dumps will trigger when memory usage reaches {AncestryRuntimeConstants.disk_dump_memory_percent_threshold}%"
     )
     collection_refs_query_docs = get_nonaggregate_ancestry_records_query(client, registry_db_mock)
+    nonaggregate_ancestry_records_by_lidvid = {}
 
-    for prepared_nonagg_doc_page in iterate_pages_given(
-        lambda _: psutil.virtual_memory().percent < AncestryRuntimeConstants.disk_dump_memory_percent_threshold,
-        produce_nonaggregate_iterable(collection_refs_query_docs),
-    ):
-        nonaggregate_ancestry_records_by_lidvid = {}
+    for doc in collection_refs_query_docs:
+        try:
+            collection_lidvid = PdsLidVid.from_string(doc["_source"]["collection_lidvid"])
+            for nonaggregate_lidvid_str in doc["_source"]["product_lidvid"]:
+                nonaggregate_lidvid = PdsLidVid.from_string(nonaggregate_lidvid_str)
+                bundle_ancestry = bundle_ancestry_by_collection_lidvid[collection_lidvid]
 
-        for doc in prepared_nonagg_doc_page:
-            lidvid = doc["nonaggregate_lidvid"]
-            collection_lidvid = doc["collection_lidvid"]
-            bundle_ancestry = bundle_ancestry_by_collection_lidvid[collection_lidvid]
+                if nonaggregate_lidvid not in nonaggregate_ancestry_records_by_lidvid:
+                    nonaggregate_ancestry_records_by_lidvid[nonaggregate_lidvid] = AncestryRecord(
+                        lidvid=nonaggregate_lidvid
+                    )
 
-            if lidvid not in nonaggregate_ancestry_records_by_lidvid:
-                nonaggregate_ancestry_records_by_lidvid[lidvid] = AncestryRecord(lidvid=lidvid)
+                record = nonaggregate_ancestry_records_by_lidvid[nonaggregate_lidvid]
+                record.parent_bundle_lidvids.update(bundle_ancestry)
+                record.parent_collection_lidvids.add(collection_lidvid)
 
-            record = nonaggregate_ancestry_records_by_lidvid[lidvid]
-            record.parent_bundle_lidvids.update(bundle_ancestry)
-            record.parent_collection_lidvids.add(collection_lidvid)
+                memory_threshold = AncestryRuntimeConstants.disk_dump_memory_percent_threshold
+                if psutil.virtual_memory().percent >= memory_threshold:
+                    log.info(
+                        f"Memory threshold {memory_threshold}% reached - dumping serialized history to disk for {len(nonaggregate_ancestry_records_by_lidvid)} products"
+                    )
+                    serializable_history = make_history_serializable(nonaggregate_ancestry_records_by_lidvid)
+                    dump_history_to_disk(on_disk_cache_dir, serializable_history)
+                    nonaggregate_ancestry_records_by_lidvid = {}
+                    del serializable_history
 
-        serializable_history = make_history_serializable(nonaggregate_ancestry_records_by_lidvid)
-        dump_history_to_disk(on_disk_cache_dir, serializable_history)
+        except (ValueError, KeyError) as err:
+            log.warning(
+                'Failed to parse collection and/or product LIDVIDs from document in index "%s" with id "%s" due to %s: %s',
+                doc.get("_index"),
+                doc.get("_id"),
+                type(err).__name__,
+                err,
+            )
+            continue
 
     remaining_chunk_filepaths = set(os.path.join(on_disk_cache_dir, fn) for fn in os.listdir(on_disk_cache_dir))
     while len(remaining_chunk_filepaths) > 0:
