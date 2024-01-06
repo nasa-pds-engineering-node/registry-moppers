@@ -5,26 +5,22 @@ from datetime import datetime
 from typing import Dict
 from typing import Iterable
 from typing import List
+from typing import Set
 from typing import Union
 
 from pds.registrysweepers.ancestry import AncestryRecord
 from pds.registrysweepers.ancestry.typedefs import SerializableAncestryRecordTypeDef
-from pds.registrysweepers.utils.productidentifiers.pdslidvid import PdsLidVid
 
 log = logging.getLogger(__name__)
 
 
-def make_history_serializable(history: Dict[PdsLidVid, AncestryRecord]) -> Dict[str, SerializableAncestryRecordTypeDef]:
-    """Destructively convert history into something able to be dumped to JSON"""
+def make_history_serializable(history: Dict[str, Dict[str, Union[str, Set[str], List[str]]]]):
+    """Convert history with set attributes into something able to be dumped to JSON"""
     log.debug(f"Converting history into serializable types...")
-    serializable_history: Dict[str, SerializableAncestryRecordTypeDef] = {}
-    for old_k in list(history.keys()):
-        old_v = history.pop(old_k)
-        new_k = str(old_k)
-        new_v = old_v.to_dict()
-        serializable_history[new_k] = new_v
+    for lidvid in history.keys():
+        history[lidvid]["parent_bundle_lidvids"] = list(history[lidvid]["parent_bundle_lidvids"])
+        history[lidvid]["parent_collection_lidvids"] = list(history[lidvid]["parent_collection_lidvids"])
     log.debug("    complete!")
-    return serializable_history
 
 
 def dump_history_to_disk(parent_dir: str, history: Dict[str, SerializableAncestryRecordTypeDef]):

@@ -244,27 +244,27 @@ def _get_nonaggregate_ancestry_records_with_chunking(
         try:
             collection_lidvid = PdsLidVid.from_string(doc["_source"]["collection_lidvid"])
             for nonaggregate_lidvid_str in doc["_source"]["product_lidvid"]:
-                nonaggregate_lidvid = PdsLidVid.from_string(nonaggregate_lidvid_str)
                 bundle_ancestry = bundle_ancestry_by_collection_lidvid[collection_lidvid]
 
-                if nonaggregate_lidvid not in nonaggregate_ancestry_records_by_lidvid:
-                    nonaggregate_ancestry_records_by_lidvid[nonaggregate_lidvid] = AncestryRecord(
-                        lidvid=nonaggregate_lidvid
-                    )
+                if nonaggregate_lidvid_str not in nonaggregate_ancestry_records_by_lidvid:
+                    nonaggregate_ancestry_records_by_lidvid[nonaggregate_lidvid_str] = {
+                        "lidvid": nonaggregate_lidvid_str,
+                        "parent_collection_lidvids": set(),
+                        "parent_bundle_lidvids": set(),
+                    }
 
-                record = nonaggregate_ancestry_records_by_lidvid[nonaggregate_lidvid]
-                record.parent_bundle_lidvids.update(bundle_ancestry)
-                record.parent_collection_lidvids.add(collection_lidvid)
+                record = nonaggregate_ancestry_records_by_lidvid[nonaggregate_lidvid_str]
+                record["parent_bundle_lidvids"].update({str(id) for id in bundle_ancestry})
+                record["parent_collection_lidvids"].add(str(collection_lidvid))
 
                 memory_threshold = AncestryRuntimeConstants.disk_dump_memory_percent_threshold
                 if psutil.virtual_memory().percent >= memory_threshold:
                     log.info(
                         f"Memory threshold {memory_threshold}% reached - dumping serialized history to disk for {len(nonaggregate_ancestry_records_by_lidvid)} products"
                     )
-                    serializable_history = make_history_serializable(nonaggregate_ancestry_records_by_lidvid)
-                    dump_history_to_disk(on_disk_cache_dir, serializable_history)
+                    make_history_serializable(nonaggregate_ancestry_records_by_lidvid)
+                    dump_history_to_disk(on_disk_cache_dir, nonaggregate_ancestry_records_by_lidvid)
                     nonaggregate_ancestry_records_by_lidvid = {}
-                    del serializable_history
 
         except (ValueError, KeyError) as err:
             log.warning(
