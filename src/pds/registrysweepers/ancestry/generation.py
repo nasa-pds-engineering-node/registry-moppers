@@ -16,6 +16,7 @@ from pds.registrysweepers.ancestry.queries import get_bundle_ancestry_records_qu
 from pds.registrysweepers.ancestry.queries import get_collection_ancestry_records_bundles_query
 from pds.registrysweepers.ancestry.queries import get_collection_ancestry_records_collections_query
 from pds.registrysweepers.ancestry.queries import get_nonaggregate_ancestry_records_query
+from pds.registrysweepers.ancestry.runtimeconstants import AncestryRuntimeConstants
 from pds.registrysweepers.ancestry.utils import dump_history_to_disk
 from pds.registrysweepers.ancestry.utils import load_partial_history_to_records
 from pds.registrysweepers.ancestry.utils import make_history_serializable
@@ -172,12 +173,20 @@ def get_nonaggregate_ancestry_records(
         record.lidvid: record.parent_bundle_lidvids for record in collection_ancestry_records
     }
 
-    on_disk_cache_dir = tempfile.mkdtemp(prefix="ancestry-cache_")
+    using_cache_override = bool(os.environ.get("TMP_OVERRIDE_DIR"))
+    if using_cache_override:
+        on_disk_cache_dir = os.environ.get("TMP_OVERRIDE_DIR")
+        os.makedirs(on_disk_cache_dir, exist_ok=True)
+    else:
+        on_disk_cache_dir = tempfile.mkdtemp(prefix="ancestry-cache_")
     log.info(f"caching partial non-aggregate ancestry result-sets to {on_disk_cache_dir}")
 
     collection_refs_query_docs = get_nonaggregate_ancestry_records_query(client, registry_db_mock)
 
-    for prepared_nonagg_doc_page in iterate_pages_of(500000, produce_nonaggregate_iterable(collection_refs_query_docs)):
+    for prepared_nonagg_doc_page in iterate_pages_of(
+        AncestryRuntimeConstants.nonaggregate_records_disk_dump_threshold,
+        produce_nonaggregate_iterable(collection_refs_query_docs),
+    ):
         nonaggregate_ancestry_records_by_lidvid = {}
 
         for doc in prepared_nonagg_doc_page:
@@ -205,4 +214,5 @@ def get_nonaggregate_ancestry_records(
             yield record
         os.remove(active_filepath)  # clean it up to give an indication of progress
 
-    shutil.rmtree(on_disk_cache_dir)
+    if not using_cache_override:
+        shutil.rmtree(on_disk_cache_dir)

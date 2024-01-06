@@ -7,6 +7,7 @@ from typing import Iterable
 from typing import Optional
 
 from opensearchpy import OpenSearch
+from pds.registrysweepers.ancestry.runtimeconstants import AncestryRuntimeConstants
 from pds.registrysweepers.utils.db import query_registry_db_or_mock
 
 log = logging.getLogger(__name__)
@@ -74,7 +75,7 @@ def get_nonaggregate_ancestry_records_query(client: OpenSearch, registry_db_mock
         query,
         _source,
         index_name="registry-refs",
-        page_size=2000,
+        page_size=AncestryRuntimeConstants.nonaggregate_ancestry_records_query_page_size,
         request_timeout_seconds=30,
         sort_fields=["collection_lidvid", "batch_id"],
     )
