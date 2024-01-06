@@ -53,7 +53,7 @@ def make_history_serializable(history: Dict[PdsLidVid, AncestryRecord]) -> Dict[
 
 
 def dump_history_to_disk(parent_dir: str, history: Dict[str, SerializableAncestryRecordTypeDef]):
-    temp_fp = os.path.join(parent_dir, datetime.now().isoformat())
+    temp_fp = os.path.join(parent_dir, datetime.now().isoformat().replace(":", "-"))
     log.info(f"Dumping history of {len(history)} products to {temp_fp} for later merging")
     with open(temp_fp, "w+") as outfile:
         json.dump(history, outfile)
