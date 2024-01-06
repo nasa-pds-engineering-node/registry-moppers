@@ -1,5 +1,6 @@
 import json
 import logging
+import math
 import sys
 from typing import Callable
 from typing import Dict
@@ -149,12 +150,14 @@ def query_registry_db_with_search_after(
 
     more_data_exists = True
     search_after_values: Union[List, None] = None
+    current_page = 1
+    expected_pages = None
     while more_data_exists:
         if search_after_values is not None:
             query["search_after"] = search_after_values
-        log.info(
-            f"paging {page_size} hits with sort fields {sort_fields} and search-after values {search_after_values}"
-        )
+            log.info(
+                f"Query {query_id} paging {page_size} hits (page {current_page} of {expected_pages}) with sort fields {sort_fields} and search-after values {search_after_values}"
+            )
 
         def fetch_func():
             return client.search(
@@ -164,7 +167,8 @@ def query_registry_db_with_search_after(
                 size=page_size,
                 sort=sort_fields,
                 _source_includes=_source.get("includes", []),  # TODO: Break out from the enclosing _source object
-                _source_excludes=_source.get("excludes", []),  # TODO: Break out from the enclosing _source object
+                _source_excludes=_source.get("excludes", []),  # TODO: Break out from the enclosing _source object,
+                track_total_hits=True,
             )
 
         results = retry_call(
@@ -176,6 +180,8 @@ def query_registry_db_with_search_after(
         )
 
         total_hits = results["hits"]["total"]["value"]
+        current_page += 1
+        expected_pages = math.ceil(total_hits / page_size)
         if served_hits == 0:
             log.info(f"Query {query_id} returns {total_hits} total hits")
         log.debug(
