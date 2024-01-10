@@ -79,9 +79,6 @@ def query_registry_db(
         total_hits = results["hits"]["total"]["value"]
         if served_hits == 0:
             log.info(f"Query {query_id} returns {total_hits} total hits")
-        log.debug(
-            f"   paging query {query_id} ({served_hits} to {min(served_hits + page_size, total_hits)} of {total_hits})"
-        )
 
         response_hits = results["hits"]["hits"]
         for hit in response_hits:
@@ -184,9 +181,6 @@ def query_registry_db_with_search_after(
         expected_pages = math.ceil(total_hits / page_size)
         if served_hits == 0:
             log.info(f"Query {query_id} returns {total_hits} total hits")
-        log.debug(
-            f"   paging query {query_id} ({served_hits} to {min(served_hits + page_size, total_hits)} of {total_hits})"
-        )
 
         response_hits = results["hits"]["hits"]
         for hit in response_hits:
