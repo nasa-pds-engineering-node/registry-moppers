@@ -1,6 +1,7 @@
 import logging
 import os
 import shutil
+import sys
 import tempfile
 from typing import Dict
 from typing import Iterable
@@ -234,12 +235,23 @@ def _get_nonaggregate_ancestry_records_with_chunking(
     else:
         on_disk_cache_dir = tempfile.mkdtemp(prefix="ancestry-merge-dump_")
     log.info(f"dumping partial non-aggregate ancestry result-sets to {on_disk_cache_dir}")
-    log.info(
-        f"dumps will trigger when memory usage reaches {AncestryRuntimeConstants.disk_dump_memory_percent_threshold}%"
-    )
-    collection_refs_query_docs = get_nonaggregate_ancestry_records_query(client, registry_db_mock)
-    nonaggregate_ancestry_records_by_lidvid = {}
 
+    collection_refs_query_docs = get_nonaggregate_ancestry_records_query(client, registry_db_mock)
+
+    baseline_memory_usage = psutil.virtual_memory().percent
+    user_configured_max_memory_usage = AncestryRuntimeConstants.max_acceptable_memory_usage
+    available_processing_memory = user_configured_max_memory_usage - baseline_memory_usage
+    disk_dump_memory_threshold = baseline_memory_usage + (
+        available_processing_memory / 2.5
+    )  # peak expected memory use is during merge, where two dump files are open simultaneously. 0.5 added for overhead after testing revealed 2.0 was insufficient
+    log.info(
+        f"Max memory use set at {user_configured_max_memory_usage}% - dumps will trigger when memory usage reaches {disk_dump_memory_threshold:.1f}%"
+    )
+    chunk_size_max = (
+        0  # populated based on the largest encountered chunk.  see split_chunk_if_oversized() for explanation
+    )
+
+    nonaggregate_ancestry_records_by_lidvid = {}
     for doc in collection_refs_query_docs:
         try:
             collection_lidvid = PdsLidVid.from_string(doc["_source"]["collection_lidvid"])
@@ -257,13 +269,15 @@ def _get_nonaggregate_ancestry_records_with_chunking(
                 record["parent_bundle_lidvids"].update({str(id) for id in bundle_ancestry})
                 record["parent_collection_lidvids"].add(str(collection_lidvid))
 
-                memory_threshold = AncestryRuntimeConstants.disk_dump_memory_percent_threshold
-                if psutil.virtual_memory().percent >= memory_threshold:
+                if psutil.virtual_memory().percent >= disk_dump_memory_threshold:
                     log.info(
-                        f"Memory threshold {memory_threshold}% reached - dumping serialized history to disk for {len(nonaggregate_ancestry_records_by_lidvid)} products"
+                        f"Memory threshold {disk_dump_memory_threshold}% reached - dumping serialized history to disk for {len(nonaggregate_ancestry_records_by_lidvid)} products"
                     )
                     make_history_serializable(nonaggregate_ancestry_records_by_lidvid)
                     dump_history_to_disk(on_disk_cache_dir, nonaggregate_ancestry_records_by_lidvid)
+                    chunk_size_max = max(
+                        chunk_size_max, sys.getsizeof(nonaggregate_ancestry_records_by_lidvid)
+                    )  # slightly problematic due to reuse of pointers vs actual values, but let's try it
                     nonaggregate_ancestry_records_by_lidvid = {}
 
         except (ValueError, KeyError) as err:
@@ -276,15 +290,16 @@ def _get_nonaggregate_ancestry_records_with_chunking(
             )
             continue
 
-    remaining_chunk_filepaths = set(os.path.join(on_disk_cache_dir, fn) for fn in os.listdir(on_disk_cache_dir))
+    remaining_chunk_filepaths = list(os.path.join(on_disk_cache_dir, fn) for fn in os.listdir(on_disk_cache_dir))
     while len(remaining_chunk_filepaths) > 0:
+        # use of pop() here is important - see comment in merge_matching_history_chunks() where
+        # ancestry.utils.split_chunk_if_oversized() is called, for justification
         active_filepath = remaining_chunk_filepaths.pop()
-        merge_matching_history_chunks(active_filepath, remaining_chunk_filepaths)
+        merge_matching_history_chunks(active_filepath, remaining_chunk_filepaths, max_chunk_size=chunk_size_max)
 
         records_from_file = load_partial_history_to_records(active_filepath)
         for record in records_from_file:
             yield record
-        os.remove(active_filepath)  # clean it up to give an indication of progress
 
     if not using_cache_override:
         shutil.rmtree(on_disk_cache_dir)
