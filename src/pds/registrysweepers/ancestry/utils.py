@@ -36,7 +36,7 @@ def dump_history_to_disk(parent_dir: str, history: Dict[str, SerializableAncestr
     return temp_fp
 
 
-def merge_matching_history_chunks(dest_fp: str, src_fps: List[str], max_chunk_size: int):
+def merge_matching_history_chunks(dest_fp: str, src_fps: List[str], max_chunk_size: int = None):
     log.info(f"Performing merges into {dest_fp} using max_chunk_size={max_chunk_size}")
     with open(dest_fp, "r") as dest_infile:
         dest_file_content: Dict[str, SerializableAncestryRecordTypeDef] = json.load(dest_infile)
@@ -95,13 +95,16 @@ def merge_matching_history_chunks(dest_fp: str, src_fps: List[str], max_chunk_si
     log.debug("    complete!")
 
 
-def split_chunk_if_oversized(max_chunk_size: int, parent_dir: str, content: Dict) -> Union[str, None]:
+def split_chunk_if_oversized(max_chunk_size: Union[int, None], parent_dir: str, content: Dict) -> Union[str, None]:
     """
     To keep memory usage near expected bounds, it's necessary to avoid accumulation into a merge destination chunk such
     that its size balloons beyond the size of a pre-merge chunk.  This is achieved by splitting the chunk approximately
     in half, if its size exceeds the given threshold, and returning the newly-created chunk's filepath for addition to
     the processing queue.
     """
+    if max_chunk_size is None:
+        return None
+
     if not sys.getsizeof(content) > max_chunk_size:
         return None
 
