@@ -290,6 +290,15 @@ def _get_nonaggregate_ancestry_records_with_chunking(
             )
             continue
 
+    # don't forget to yield non-disk-dumped records
+    make_history_serializable(nonaggregate_ancestry_records_by_lidvid)
+    chunk_size_max = max(
+        chunk_size_max, sys.getsizeof(nonaggregate_ancestry_records_by_lidvid)
+    )
+    for history_dict in nonaggregate_ancestry_records_by_lidvid.values():
+        yield AncestryRecord.from_dict(history_dict)
+
+    # merge/yield the disk-dumped records
     remaining_chunk_filepaths = list(os.path.join(on_disk_cache_dir, fn) for fn in os.listdir(on_disk_cache_dir))
     while len(remaining_chunk_filepaths) > 0:
         # use of pop() here is important - see comment in merge_matching_history_chunks() where
