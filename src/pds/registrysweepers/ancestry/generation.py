@@ -9,7 +9,7 @@ from typing import List
 from typing import Mapping
 from typing import Set
 
-import psutil
+import psutil  # type: ignore
 from opensearchpy import OpenSearch
 from pds.registrysweepers.ancestry.ancestryrecord import AncestryRecord
 from pds.registrysweepers.ancestry.queries import DbMockTypeDef
@@ -230,7 +230,7 @@ def _get_nonaggregate_ancestry_records_with_chunking(
 
     using_cache_override = bool(os.environ.get("TMP_OVERRIDE_DIR"))
     if using_cache_override:
-        on_disk_cache_dir = os.environ.get("TMP_OVERRIDE_DIR")
+        on_disk_cache_dir: str = os.environ.get("TMP_OVERRIDE_DIR")  # type: ignore
         os.makedirs(on_disk_cache_dir, exist_ok=True)
     else:
         on_disk_cache_dir = tempfile.mkdtemp(prefix="ancestry-merge-dump_")
@@ -265,9 +265,9 @@ def _get_nonaggregate_ancestry_records_with_chunking(
                         "parent_bundle_lidvids": set(),
                     }
 
-                record = nonaggregate_ancestry_records_by_lidvid[nonaggregate_lidvid_str]
-                record["parent_bundle_lidvids"].update({str(id) for id in bundle_ancestry})
-                record["parent_collection_lidvids"].add(str(collection_lidvid))
+                record_dict = nonaggregate_ancestry_records_by_lidvid[nonaggregate_lidvid_str]
+                record_dict["parent_bundle_lidvids"].update({str(id) for id in bundle_ancestry})
+                record_dict["parent_collection_lidvids"].add(str(collection_lidvid))
 
                 if psutil.virtual_memory().percent >= disk_dump_memory_threshold:
                     log.info(
@@ -292,9 +292,7 @@ def _get_nonaggregate_ancestry_records_with_chunking(
 
     # don't forget to yield non-disk-dumped records
     make_history_serializable(nonaggregate_ancestry_records_by_lidvid)
-    chunk_size_max = max(
-        chunk_size_max, sys.getsizeof(nonaggregate_ancestry_records_by_lidvid)
-    )
+    chunk_size_max = max(chunk_size_max, sys.getsizeof(nonaggregate_ancestry_records_by_lidvid))
     for history_dict in nonaggregate_ancestry_records_by_lidvid.values():
         yield AncestryRecord.from_dict(history_dict)
 

@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 def make_history_serializable(history: Dict[str, Dict[str, Union[str, Set[str], List[str]]]]):
     """Convert history with set attributes into something able to be dumped to JSON"""
-    log.debug(f"Converting history into serializable types...")
+    log.debug("Converting history into serializable types...")
     for lidvid in history.keys():
         history[lidvid]["parent_bundle_lidvids"] = list(history[lidvid]["parent_bundle_lidvids"])
         history[lidvid]["parent_collection_lidvids"] = list(history[lidvid]["parent_collection_lidvids"])
@@ -36,7 +36,7 @@ def dump_history_to_disk(parent_dir: str, history: Dict[str, SerializableAncestr
     return temp_fp
 
 
-def merge_matching_history_chunks(dest_fp: str, src_fps: List[str], max_chunk_size: int = None):
+def merge_matching_history_chunks(dest_fp: str, src_fps: List[str], max_chunk_size: Union[int, None] = None):
     log.info(f"Performing merges into {dest_fp} using max_chunk_size={max_chunk_size}")
     with open(dest_fp, "r") as dest_infile:
         dest_file_content: Dict[str, SerializableAncestryRecordTypeDef] = json.load(dest_infile)

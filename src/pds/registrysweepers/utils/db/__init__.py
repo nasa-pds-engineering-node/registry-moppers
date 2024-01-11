@@ -122,7 +122,7 @@ def query_registry_db_with_search_after(
     _source: Dict,
     index_name: str = "registry",
     page_size: int = 10000,
-    sort_fields: List[str] = None,
+    sort_fields: Union[List[str], None] = None,
     request_timeout_seconds: int = 20,
 ) -> Iterable[Dict]:
     """
@@ -225,7 +225,7 @@ def query_registry_db_or_mock(
             page_size: int = 10000,
             scroll_validity_duration_minutes: int = 10,
             request_timeout_seconds: int = 20,
-            sort_fields: List[str] = [],
+            sort_fields: Union[List[str], None] = None,
         ) -> Iterable[Dict]:
             return mock_f(mock_query_id)  # type: ignore  # see None-check above
 
