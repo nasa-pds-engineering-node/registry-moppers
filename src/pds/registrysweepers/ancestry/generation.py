@@ -271,7 +271,7 @@ def _get_nonaggregate_ancestry_records_with_chunking(
 
                 if psutil.virtual_memory().percent >= disk_dump_memory_threshold:
                     log.info(
-                        f"Memory threshold {disk_dump_memory_threshold}% reached - dumping serialized history to disk for {len(nonaggregate_ancestry_records_by_lidvid)} products"
+                        f"Memory threshold {disk_dump_memory_threshold:.1f}% reached - dumping serialized history to disk for {len(nonaggregate_ancestry_records_by_lidvid)} products"
                     )
                     make_history_serializable(nonaggregate_ancestry_records_by_lidvid)
                     dump_history_to_disk(on_disk_cache_dir, nonaggregate_ancestry_records_by_lidvid)
@@ -298,6 +298,10 @@ def _get_nonaggregate_ancestry_records_with_chunking(
 
     # merge/yield the disk-dumped records
     remaining_chunk_filepaths = list(os.path.join(on_disk_cache_dir, fn) for fn in os.listdir(on_disk_cache_dir))
+    disk_swap_space_utilized_gb = sum(os.stat(filepath).st_size for filepath in remaining_chunk_filepaths) / 1024**3
+    log.info(
+        f"On-disk swap comprised of {len(remaining_chunk_filepaths)} files totalling {disk_swap_space_utilized_gb:.1f}GB"
+    )
     while len(remaining_chunk_filepaths) > 0:
         # use of pop() here is important - see comment in merge_matching_history_chunks() where
         # ancestry.utils.split_chunk_if_oversized() is called, for justification
