@@ -1,3 +1,4 @@
+import gc
 import logging
 import os
 import shutil
@@ -295,6 +296,8 @@ def _get_nonaggregate_ancestry_records_with_chunking(
     chunk_size_max = max(chunk_size_max, sys.getsizeof(nonaggregate_ancestry_records_by_lidvid))
     for history_dict in nonaggregate_ancestry_records_by_lidvid.values():
         yield AncestryRecord.from_dict(history_dict)
+    del nonaggregate_ancestry_records_by_lidvid
+    gc.collect()
 
     # merge/yield the disk-dumped records
     remaining_chunk_filepaths = list(os.path.join(on_disk_cache_dir, fn) for fn in os.listdir(on_disk_cache_dir))
