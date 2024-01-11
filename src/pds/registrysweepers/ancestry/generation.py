@@ -234,7 +234,7 @@ def _get_nonaggregate_ancestry_records_with_chunking(
         os.makedirs(on_disk_cache_dir, exist_ok=True)
     else:
         on_disk_cache_dir = tempfile.mkdtemp(prefix="ancestry-merge-dump_")
-    log.info(f"dumping partial non-aggregate ancestry result-sets to {on_disk_cache_dir}")
+    log.debug(f"dumping partial non-aggregate ancestry result-sets to {on_disk_cache_dir}")
 
     collection_refs_query_docs = get_nonaggregate_ancestry_records_query(client, registry_db_mock)
 
@@ -270,7 +270,7 @@ def _get_nonaggregate_ancestry_records_with_chunking(
                 record_dict["parent_collection_lidvids"].add(str(collection_lidvid))
 
                 if psutil.virtual_memory().percent >= disk_dump_memory_threshold:
-                    log.info(
+                    log.debug(
                         f"Memory threshold {disk_dump_memory_threshold:.1f}% reached - dumping serialized history to disk for {len(nonaggregate_ancestry_records_by_lidvid)} products"
                     )
                     make_history_serializable(nonaggregate_ancestry_records_by_lidvid)

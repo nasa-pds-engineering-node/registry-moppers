@@ -37,12 +37,12 @@ def query_registry_db(
 
     scroll_keepalive = f"{scroll_keepalive_minutes}m"
     query_id = get_random_hex_id()  # This is just used to differentiate queries during logging
-    log.info(f"Initiating query (id {query_id}) of index {index_name}: {json.dumps(query)}")
+    log.debug(f"Initiating query (id {query_id}) of index {index_name}: {json.dumps(query)}")
 
     served_hits = 0
 
     last_info_log_at_percentage = 0
-    log.info(f"Query {query_id} progress: 0%")
+    log.debug(f"Query {query_id} progress: 0%")
 
     more_data_exists = True
     scroll_id = None
@@ -78,7 +78,7 @@ def query_registry_db(
 
         total_hits = results["hits"]["total"]["value"]
         if served_hits == 0:
-            log.info(f"Query {query_id} returns {total_hits} total hits")
+            log.debug(f"Query {query_id} returns {total_hits} total hits")
 
         response_hits = results["hits"]["hits"]
         for hit in response_hits:
@@ -87,7 +87,7 @@ def query_registry_db(
             percentage_of_hits_served = int(served_hits / total_hits * 100)
             if last_info_log_at_percentage is None or percentage_of_hits_served >= (last_info_log_at_percentage + 5):
                 last_info_log_at_percentage = percentage_of_hits_served
-                log.info(f"Query {query_id} progress: {percentage_of_hits_served}%")
+                log.debug(f"Query {query_id} progress: {percentage_of_hits_served}%")
 
             yield hit
 
@@ -113,7 +113,7 @@ def query_registry_db(
         logger=log,
     )
 
-    log.info(f"Query {query_id} complete!")
+    log.debug(f"Query {query_id} complete!")
 
 
 def query_registry_db_with_search_after(
@@ -138,12 +138,12 @@ def query_registry_db_with_search_after(
     sort_fields = sort_fields or ["lidvid"]
 
     query_id = get_random_hex_id()  # This is just used to differentiate queries during logging
-    log.info(f"Initiating query with id {query_id}: {json.dumps(query)}")
+    log.debug(f"Initiating query with id {query_id}: {json.dumps(query)}")
 
     served_hits = 0
 
     last_info_log_at_percentage = 0
-    log.info(f"Query {query_id} progress: 0%")
+    log.debug(f"Query {query_id} progress: 0%")
 
     more_data_exists = True
     search_after_values: Union[List, None] = None
@@ -152,7 +152,7 @@ def query_registry_db_with_search_after(
     while more_data_exists:
         if search_after_values is not None:
             query["search_after"] = search_after_values
-            log.info(
+            log.debug(
                 f"Query {query_id} paging {page_size} hits (page {current_page} of {expected_pages}) with sort fields {sort_fields} and search-after values {search_after_values}"
             )
 
@@ -180,7 +180,7 @@ def query_registry_db_with_search_after(
         current_page += 1
         expected_pages = math.ceil(total_hits / page_size)
         if served_hits == 0:
-            log.info(f"Query {query_id} returns {total_hits} total hits")
+            log.debug(f"Query {query_id} returns {total_hits} total hits")
 
         response_hits = results["hits"]["hits"]
         for hit in response_hits:
@@ -189,7 +189,7 @@ def query_registry_db_with_search_after(
             percentage_of_hits_served = int(served_hits / total_hits * 100)
             if last_info_log_at_percentage is None or percentage_of_hits_served >= (last_info_log_at_percentage + 5):
                 last_info_log_at_percentage = percentage_of_hits_served
-                log.info(f"Query {query_id} progress: {percentage_of_hits_served}%")
+                log.debug(f"Query {query_id} progress: {percentage_of_hits_served}%")
 
             yield hit
 
@@ -209,7 +209,7 @@ def query_registry_db_with_search_after(
 
         more_data_exists = served_hits < results["hits"]["total"]["value"]
 
-    log.info(f"Query {query_id} complete!")
+    log.debug(f"Query {query_id} complete!")
 
 
 def query_registry_db_or_mock(
@@ -260,7 +260,7 @@ def write_updated_docs(
         )
 
         if flush_threshold_reached:
-            log.info(
+            log.debug(
                 f"Bulk update buffer has reached {threshold_log_str} threshold - writing {buffered_updates_count} document updates to db..."
             )
             _write_bulk_updates_chunk(client, index_name, bulk_updates_buffer)
@@ -276,7 +276,7 @@ def write_updated_docs(
         updated_doc_count += 1
 
     if len(bulk_updates_buffer) > 0:
-        log.info(f"Writing documents updates for {buffered_updates_count} remaining products to db...")
+        log.debug(f"Writing documents updates for {buffered_updates_count} remaining products to db...")
         _write_bulk_updates_chunk(client, index_name, bulk_updates_buffer)
 
     log.info(f"Updated documents for {updated_doc_count} total products!")
@@ -332,7 +332,7 @@ def _write_bulk_updates_chunk(client: OpenSearch, index_name: str, bulk_updates:
                         f"Attempt to update the following documents failed unexpectedly due to {error_type} ({error_reason}): {ids_str}"
                     )
     else:
-        log.info("Successfully wrote bulk update chunk")
+        log.debug("Successfully wrote bulk update chunk")
 
 
 def aggregate_update_error_types(items: Iterable[Dict]) -> Mapping[str, Dict[str, List[str]]]:

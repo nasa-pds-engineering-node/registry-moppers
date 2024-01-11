@@ -28,7 +28,7 @@ def make_history_serializable(history: Dict[str, Dict[str, Union[str, Set[str], 
 def dump_history_to_disk(parent_dir: str, history: Dict[str, SerializableAncestryRecordTypeDef]) -> str:
     """Dump set of history records to disk and return the filepath"""
     temp_fp = os.path.join(parent_dir, datetime.now().isoformat().replace(":", "-"))
-    log.info(f"Dumping history to {temp_fp} for later merging...")
+    log.debug(f"Dumping history to {temp_fp} for later merging...")
     with open(temp_fp, "w+") as outfile:
         json.dump(history, outfile)
     log.debug("    complete!")
@@ -37,7 +37,7 @@ def dump_history_to_disk(parent_dir: str, history: Dict[str, SerializableAncestr
 
 
 def merge_matching_history_chunks(dest_fp: str, src_fps: List[str], max_chunk_size: Union[int, None] = None):
-    log.info(f"Performing merges into {dest_fp} using max_chunk_size={max_chunk_size}")
+    log.debug(f"Performing merges into {dest_fp} using max_chunk_size={max_chunk_size}")
     with open(dest_fp, "r") as dest_infile:
         dest_file_content: Dict[str, SerializableAncestryRecordTypeDef] = json.load(dest_infile)
 
@@ -114,7 +114,7 @@ def split_chunk_if_oversized(max_chunk_size: Union[int, None], parent_dir: str, 
         split_content[k] = content.pop(k)
 
     split_filepath = dump_history_to_disk(parent_dir, split_content)
-    log.info(f"split off excess chunk content to new file: {split_filepath}")
+    log.debug(f"split off excess chunk content to new file: {split_filepath}")
     return split_filepath
 
 
