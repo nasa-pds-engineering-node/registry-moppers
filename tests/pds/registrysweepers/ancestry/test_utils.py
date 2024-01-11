@@ -13,13 +13,13 @@ from pds.registrysweepers.utils.productidentifiers.pdslidvid import PdsLidVid
 class TestMakeHistorySerializableTestCase(unittest.TestCase):
     def test_basic_behaviour(self):
         input = {
-            r.lidvid: r
+            r["lidvid"]: r
             for r in [
-                AncestryRecord(
-                    lidvid=PdsLidVid.from_string(f"a:b:c:d:e:{x}::1.0"),
-                    parent_collection_lidvids={PdsLidVid.from_string("a:b:c:d:e::1.0")},
-                    parent_bundle_lidvids={PdsLidVid.from_string("a:b:c:d::1.0")},
-                )
+                {
+                    "lidvid": f"a:b:c:d:e:{x}::1.0",
+                    "parent_collection_lidvids": {"a:b:c:d:e::1.0"},
+                    "parent_bundle_lidvids": {"a:b:c:d::1.0"},
+                }
                 for x in ["A", "B", "C"]
             ]
         }
@@ -36,10 +36,9 @@ class TestMakeHistorySerializableTestCase(unittest.TestCase):
             ]
         }
 
-        serializable_history = make_history_serializable(input)
+        make_history_serializable(input)
 
-        self.assertDictEqual(expected, serializable_history)
-        self.assertEqual(0, len(input), "input was consumed")
+        self.assertDictEqual(expected, input)
 
 
 class TestMergeMatchingHistoryChunksTestCase(unittest.TestCase):
