@@ -22,8 +22,7 @@ def repair(document: Dict, fieldname: str) -> Dict:
     if fieldname in EXCLUDED_PROPERTIES or fieldname.startswith("ops:Provenance"):
         return {}
 
-    log.debug(f"checking {fieldname}")
     if isinstance(document[fieldname], str):
-        log.debug(f"found string for {fieldname} where it should be an array")
+        log.debug(f"found string in doc {document.get('_id')} for field {fieldname} where it should be an array")
         return {fieldname: [document[fieldname]]}
     return {}

@@ -63,7 +63,6 @@ def generate_updates(
         id = document["_id"]
         src = document["_source"]
         repairs = {repairkit_version_metadata_key: int(repairkit_version)}
-        log.debug(f"applying repairkit sweeper to document: {id}")
         for fieldname, data in src.items():
             for regex, funcs in REPAIR_TOOLS.items():
                 if regex(fieldname):

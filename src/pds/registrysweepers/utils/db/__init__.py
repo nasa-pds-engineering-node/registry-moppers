@@ -1,5 +1,6 @@
 import json
 import logging
+import math
 import sys
 from typing import Callable
 from typing import Dict
@@ -25,6 +26,7 @@ def query_registry_db(
     index_name: str = "registry",
     page_size: int = 10000,
     scroll_keepalive_minutes: int = 10,
+    request_timeout_seconds: int = 20,
 ) -> Iterable[Dict]:
     """
     Given an OpenSearch client and query/_source, return an iterable collection of hits
@@ -34,14 +36,13 @@ def query_registry_db(
     """
 
     scroll_keepalive = f"{scroll_keepalive_minutes}m"
-    request_timeout = 20
     query_id = get_random_hex_id()  # This is just used to differentiate queries during logging
-    log.info(f"Initiating query with id {query_id}: {json.dumps(query)}")
+    log.debug(f"Initiating query (id {query_id}) of index {index_name}: {json.dumps(query)}")
 
     served_hits = 0
 
     last_info_log_at_percentage = 0
-    log.info(f"Query {query_id} progress: 0%")
+    log.debug(f"Query {query_id} progress: 0%")
 
     more_data_exists = True
     scroll_id = None
@@ -53,7 +54,7 @@ def query_registry_db(
                     index=index_name,
                     body=query,
                     scroll=scroll_keepalive,
-                    request_timeout=request_timeout,
+                    request_timeout=request_timeout_seconds,
                     size=page_size,
                     _source_includes=_source.get("includes", []),  # TODO: Break out from the enclosing _source object
                     _source_excludes=_source.get("excludes", []),  # TODO: Break out from the enclosing _source object
@@ -62,7 +63,9 @@ def query_registry_db(
         else:
 
             def fetch_func(_scroll_id: str = scroll_id):
-                return client.scroll(scroll_id=_scroll_id, scroll=scroll_keepalive, request_timeout=request_timeout)
+                return client.scroll(
+                    scroll_id=_scroll_id, scroll=scroll_keepalive, request_timeout=request_timeout_seconds
+                )
 
         results = retry_call(
             fetch_func,
@@ -75,10 +78,7 @@ def query_registry_db(
 
         total_hits = results["hits"]["total"]["value"]
         if served_hits == 0:
-            log.info(f"Query {query_id} returns {total_hits} total hits")
-        log.debug(
-            f"   paging query {query_id} ({served_hits} to {min(served_hits + page_size, total_hits)} of {total_hits})"
-        )
+            log.debug(f"Query {query_id} returns {total_hits} total hits")
 
         response_hits = results["hits"]["hits"]
         for hit in response_hits:
@@ -87,7 +87,7 @@ def query_registry_db(
             percentage_of_hits_served = int(served_hits / total_hits * 100)
             if last_info_log_at_percentage is None or percentage_of_hits_served >= (last_info_log_at_percentage + 5):
                 last_info_log_at_percentage = percentage_of_hits_served
-                log.info(f"Query {query_id} progress: {percentage_of_hits_served}%")
+                log.debug(f"Query {query_id} progress: {percentage_of_hits_served}%")
 
             yield hit
 
@@ -113,10 +113,108 @@ def query_registry_db(
         logger=log,
     )
 
-    log.info(f"Query {query_id} complete!")
+    log.debug(f"Query {query_id} complete!")
 
 
-def query_registry_db_or_mock(mock_f: Optional[Callable[[str], Iterable[Dict]]], mock_query_id: str):
+def query_registry_db_with_search_after(
+    client: OpenSearch,
+    query: Dict,
+    _source: Dict,
+    index_name: str = "registry",
+    page_size: int = 10000,
+    sort_fields: Union[List[str], None] = None,
+    request_timeout_seconds: int = 20,
+) -> Iterable[Dict]:
+    """
+    Given an OpenSearch client and query/_source, return an iterable collection of hits
+
+    Example query: {"query: {"bool": {"must": [{"terms": {"ops:Tracking_Meta/ops:archive_status": ["archived", "certified"]}}]}}}
+    Example _source: {"includes": ["lidvid"]}
+    """
+
+    # Use 'lidvid' by default, though this may cause problems later as it may not exist for all documents - edunn 20230105
+    # it is not recommended to use _id per https://www.elastic.co/guide/en/elasticsearch/reference/6.8/search-request-search-after.html
+    # (see first !IMPORTANT! note)
+    sort_fields = sort_fields or ["lidvid"]
+
+    query_id = get_random_hex_id()  # This is just used to differentiate queries during logging
+    log.debug(f"Initiating query with id {query_id}: {json.dumps(query)}")
+
+    served_hits = 0
+
+    last_info_log_at_percentage = 0
+    log.debug(f"Query {query_id} progress: 0%")
+
+    more_data_exists = True
+    search_after_values: Union[List, None] = None
+    current_page = 1
+    expected_pages = None
+    while more_data_exists:
+        if search_after_values is not None:
+            query["search_after"] = search_after_values
+            log.debug(
+                f"Query {query_id} paging {page_size} hits (page {current_page} of {expected_pages}) with sort fields {sort_fields} and search-after values {search_after_values}"
+            )
+
+        def fetch_func():
+            return client.search(
+                index=index_name,
+                body=query,
+                request_timeout=request_timeout_seconds,
+                size=page_size,
+                sort=sort_fields,
+                _source_includes=_source.get("includes", []),  # TODO: Break out from the enclosing _source object
+                _source_excludes=_source.get("excludes", []),  # TODO: Break out from the enclosing _source object,
+                track_total_hits=True,
+            )
+
+        results = retry_call(
+            fetch_func,
+            tries=6,
+            delay=2,
+            backoff=2,
+            logger=log,
+        )
+
+        total_hits = results["hits"]["total"]["value"]
+        current_page += 1
+        expected_pages = math.ceil(total_hits / page_size)
+        if served_hits == 0:
+            log.debug(f"Query {query_id} returns {total_hits} total hits")
+
+        response_hits = results["hits"]["hits"]
+        for hit in response_hits:
+            served_hits += 1
+
+            percentage_of_hits_served = int(served_hits / total_hits * 100)
+            if last_info_log_at_percentage is None or percentage_of_hits_served >= (last_info_log_at_percentage + 5):
+                last_info_log_at_percentage = percentage_of_hits_served
+                log.debug(f"Query {query_id} progress: {percentage_of_hits_served}%")
+
+            yield hit
+
+            # simpler to set the value after every hit than worry about OBO errors detecting the last hit in the page
+            search_after_values = [hit["_source"].get(field) for field in sort_fields]
+
+        # This is a temporary, ad-hoc guard against empty/erroneous responses which do not return non-200 status codes.
+        # Previously, this has cause infinite loops in production due to served_hits sticking and never reaching the
+        # expected total hits value.
+        # TODO: Remove this upon implementation of https://github.com/NASA-PDS/registry-sweepers/issues/42
+        hits_data_present_in_response = len(response_hits) > 0
+        if not hits_data_present_in_response and served_hits < total_hits:
+            log.error(
+                f"Response for query {query_id} contained no hits when hits were expected.  Returned data is incomplete (got {served_hits} of {total_hits} total hits).  Response was: {results}"
+            )
+            break
+
+        more_data_exists = served_hits < results["hits"]["total"]["value"]
+
+    log.debug(f"Query {query_id} complete!")
+
+
+def query_registry_db_or_mock(
+    mock_f: Optional[Callable[[str], Iterable[Dict]]], mock_query_id: str, use_search_after: bool = False
+):
     if mock_f is not None:
 
         def mock_wrapper(
@@ -126,10 +224,14 @@ def query_registry_db_or_mock(mock_f: Optional[Callable[[str], Iterable[Dict]]],
             index_name: str = "registry",
             page_size: int = 10000,
             scroll_validity_duration_minutes: int = 10,
+            request_timeout_seconds: int = 20,
+            sort_fields: Union[List[str], None] = None,
         ) -> Iterable[Dict]:
             return mock_f(mock_query_id)  # type: ignore  # see None-check above
 
         return mock_wrapper
+    elif use_search_after:
+        return query_registry_db_with_search_after
     else:
         return query_registry_db
 
@@ -158,7 +260,7 @@ def write_updated_docs(
         )
 
         if flush_threshold_reached:
-            log.info(
+            log.debug(
                 f"Bulk update buffer has reached {threshold_log_str} threshold - writing {buffered_updates_count} document updates to db..."
             )
             _write_bulk_updates_chunk(client, index_name, bulk_updates_buffer)
@@ -174,7 +276,7 @@ def write_updated_docs(
         updated_doc_count += 1
 
     if len(bulk_updates_buffer) > 0:
-        log.info(f"Writing documents updates for {buffered_updates_count} remaining products to db...")
+        log.debug(f"Writing documents updates for {buffered_updates_count} remaining products to db...")
         _write_bulk_updates_chunk(client, index_name, bulk_updates_buffer)
 
     log.info(f"Updated documents for {updated_doc_count} total products!")
@@ -187,11 +289,11 @@ def update_as_statements(update: Update) -> Iterable[str]:
     return updates_strs
 
 
-@retry(tries=6, delay=2, backoff=2, logger=log)
+@retry(tries=6, delay=15, backoff=2, logger=log)
 def _write_bulk_updates_chunk(client: OpenSearch, index_name: str, bulk_updates: Iterable[str]):
     bulk_data = "\n".join(bulk_updates) + "\n"
 
-    request_timeout = 60
+    request_timeout = 90
     response_content = client.bulk(index=index_name, body=bulk_data, request_timeout=request_timeout)
 
     if response_content.get("errors"):
@@ -230,7 +332,7 @@ def _write_bulk_updates_chunk(client: OpenSearch, index_name: str, bulk_updates:
                         f"Attempt to update the following documents failed unexpectedly due to {error_type} ({error_reason}): {ids_str}"
                     )
     else:
-        log.info("Successfully wrote bulk update chunk")
+        log.debug("Successfully wrote bulk update chunk")
 
 
 def aggregate_update_error_types(items: Iterable[Dict]) -> Mapping[str, Dict[str, List[str]]]:

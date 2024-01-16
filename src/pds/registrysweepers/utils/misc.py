@@ -1,8 +1,11 @@
+import os
 import random
 from datetime import datetime
 from typing import Any
 from typing import Callable
+from typing import Iterable
 from typing import List
+from typing import TypeVar
 
 
 def coerce_list_type(db_value: Any) -> List[Any]:
@@ -51,3 +54,48 @@ def auto_raise_for_status(f: Callable) -> Callable:
 
 def get_sweeper_version_metadata_key(sweeper_name: str) -> str:
     return f"ops:Provenance/ops:registry_sweepers_{sweeper_name}_version"
+
+
+T = TypeVar("T")
+
+
+def iterate_pages_of_size(page_size: int, iterable: Iterable[T]) -> Iterable[List[T]]:
+    """Provides a simple interface for lazily iterating over pages of an arbitrary iterable"""
+    if page_size < 1:
+        raise ValueError(f"Cannot iterate over pages of size <1 (got {page_size})")
+
+    return iterate_pages_given(lambda page: len(page) < page_size, iterable)
+
+
+def iterate_pages_given(build_page_while: Callable[[List[T]], bool], iterable: Iterable[T]) -> Iterable[List[T]]:
+    """
+    Given a condition f(active_page: List[T]) under which to continue accumulating elements into the active page, yield
+    pages of elements from the input iterable.  This exists to support behaviour like "continue building page while
+    sufficient memory is available".
+    """
+
+    page: List[T] = []
+    for el in iterable:
+        if not build_page_while(page):
+            yield page
+            page = []
+
+        page.append(el)
+
+    if len(page) > 0:
+        yield page
+
+
+def parse_boolean_env_var(key: str) -> bool:
+    raw_value = os.environ.get(key)
+
+    valid_truthy_values = ["true", "True", "TRUE", "1"]
+    valid_falsy_values = ["false", "False", "FALSE", "0", ""]
+    if raw_value in valid_falsy_values or raw_value is None:
+        return False
+    elif raw_value in valid_truthy_values:
+        return True
+    else:
+        raise ValueError(
+            f'Could not parse valid boolean from env var "{key}" - expected {valid_truthy_values} for True or {valid_falsy_values} for False'
+        )

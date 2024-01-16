@@ -1,6 +1,8 @@
 .*
 
-/venv/
+/venv
+
+/venv39
 
 /docs/
 
@@ -21,3 +23,7 @@
 /tox.ini
 
 /NOTICE.txt
+
+**/*.egg-info
+
+**/*.log

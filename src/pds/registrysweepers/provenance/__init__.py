@@ -109,10 +109,6 @@ def get_successors_by_lidvid(extant_lidvids: Iterable[str]) -> Mapping[str, str]
 
     log.info(f"Successors will be updated for {len(successors_by_lidvid)} LIDVIDs!")
 
-    if log.isEnabledFor(logging.DEBUG):
-        for lidvid in successors_by_lidvid.keys():
-            log.debug(f"{lidvid}")
-
     return successors_by_lidvid
 
 

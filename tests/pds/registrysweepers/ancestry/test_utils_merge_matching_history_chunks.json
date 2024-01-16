@@ -1,0 +1,112 @@
+{
+  "inputs": {
+    "dest.json": {
+      "a:b:c:d:e:A::1.0": {
+        "lidvid": "a:b:c:d:e:A::1.0",
+        "parent_collection_lidvids": [
+          "a:b:c:d:e::1.0"
+        ],
+        "parent_bundle_lidvids": [
+          "a:b:c:d::1.0"
+        ]
+      },
+      "a:b:c:d:e:B::1.0": {
+        "lidvid": "a:b:c:d:e:B::1.0",
+        "parent_collection_lidvids": [
+          "a:b:c:d:e::1.0"
+        ],
+        "parent_bundle_lidvids": [
+          "a:b:c:d::1.0"
+        ]
+      }
+    },
+    "src1.json": {
+      "a:b:c:d:e:A::1.0": {
+        "lidvid": "a:b:c:d:e:A::1.0",
+        "parent_collection_lidvids": [
+          "a:b:c:d:e::2.0"
+        ],
+        "parent_bundle_lidvids": [
+          "a:b:c:d::2.0"
+        ]
+      },
+      "a:b:c:d:e:a::1.0": {
+        "lidvid": "a:b:c:d:e:a::1.0",
+        "parent_collection_lidvids": [
+          "a:b:c:d:e::1.1"
+        ],
+        "parent_bundle_lidvids": [
+          "a:b:c:d::1.1"
+        ]
+      }
+    },
+    "src2.json": {
+      "a:b:c:d:e:A::1.0": {
+        "lidvid": "a:b:c:d:e:A::1.0",
+        "parent_collection_lidvids": [
+          "a:b:c:d:e::3.0"
+        ],
+        "parent_bundle_lidvids": [
+          "a:b:c:d::3.0"
+        ]
+      },
+      "a:b:c:d:e:b::1.0": {
+        "lidvid": "a:b:c:d:e:b::1.0",
+        "parent_collection_lidvids": [
+          "a:b:c:d:e::1.2"
+        ],
+        "parent_bundle_lidvids": [
+          "a:b:c:d::1.2"
+        ]
+      }
+    }
+  },
+  "outputs": {
+    "dest.json": {
+      "a:b:c:d:e:A::1.0": {
+        "lidvid": "a:b:c:d:e:A::1.0",
+        "parent_collection_lidvids": [
+          "a:b:c:d:e::1.0",
+          "a:b:c:d:e::2.0",
+          "a:b:c:d:e::3.0"
+        ],
+        "parent_bundle_lidvids": [
+          "a:b:c:d::1.0",
+          "a:b:c:d::2.0",
+          "a:b:c:d::3.0"
+        ]
+      },
+      "a:b:c:d:e:B::1.0": {
+        "lidvid": "a:b:c:d:e:B::1.0",
+        "parent_collection_lidvids": [
+          "a:b:c:d:e::1.0"
+        ],
+        "parent_bundle_lidvids": [
+          "a:b:c:d::1.0"
+        ]
+      }
+    },
+    "src1.json": {
+      "a:b:c:d:e:a::1.0": {
+        "lidvid": "a:b:c:d:e:a::1.0",
+        "parent_collection_lidvids": [
+          "a:b:c:d:e::1.1"
+        ],
+        "parent_bundle_lidvids": [
+          "a:b:c:d::1.1"
+        ]
+      }
+    },
+    "src2.json": {
+      "a:b:c:d:e:b::1.0": {
+        "lidvid": "a:b:c:d:e:b::1.0",
+        "parent_collection_lidvids": [
+          "a:b:c:d:e::1.2"
+        ],
+        "parent_bundle_lidvids": [
+          "a:b:c:d::1.2"
+        ]
+      }
+    }
+  }
+}
