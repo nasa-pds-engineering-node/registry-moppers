@@ -1,6 +1,6 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2023-12-14)
+## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2024-01-16)
 
 [Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/v1.2.0...«unknown»)
 
@@ -10,7 +10,10 @@
 
 **Other closed issues:**
 
+- docs build fails due to dependency incompatibility [\#94](https://github.com/NASA-PDS/registry-sweepers/issues/94)
+- Refresh ancestry metadata on all nodes [\#85](https://github.com/NASA-PDS/registry-sweepers/issues/85)
 - ensure ancestry metadata key presence in index [\#83](https://github.com/NASA-PDS/registry-sweepers/issues/83)
+- Profile memory usage [\#39](https://github.com/NASA-PDS/registry-sweepers/issues/39) [[s.high](https://github.com/NASA-PDS/registry-sweepers/labels/s.high)]
 - registry-sweeper deployment on AWS \(prod\) [\#17](https://github.com/NASA-PDS/registry-sweepers/issues/17)
 
 ## [v1.2.0](https://github.com/NASA-PDS/registry-sweepers/tree/v1.2.0) (2023-10-09)
