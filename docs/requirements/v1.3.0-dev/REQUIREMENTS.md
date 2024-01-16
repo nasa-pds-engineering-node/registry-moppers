@@ -12,3 +12,7 @@ This requirement is not impacted by the current version
 
 
 This requirement is not impacted by the current version
+## Investigate/implement non-redundant ancestry processing ([#91](https://github.com/NASA-PDS/registry-sweepers/issues/91)) 
+
+
+This requirement is not impacted by the current version
