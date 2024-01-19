@@ -295,7 +295,10 @@ def _get_nonaggregate_ancestry_records_with_chunking(
     make_history_serializable(nonaggregate_ancestry_records_by_lidvid)
     chunk_size_max = max(chunk_size_max, sys.getsizeof(nonaggregate_ancestry_records_by_lidvid))
     for history_dict in nonaggregate_ancestry_records_by_lidvid.values():
-        yield AncestryRecord.from_dict(history_dict)
+        try:
+            yield AncestryRecord.from_dict(history_dict)
+        except ValueError as err:
+            log.error(err)
     del nonaggregate_ancestry_records_by_lidvid
     gc.collect()
 
