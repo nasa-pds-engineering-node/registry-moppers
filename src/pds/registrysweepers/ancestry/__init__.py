@@ -43,7 +43,11 @@ def run(
     collection_records = list(get_collection_ancestry_records(client, registry_mock_query_f))
     nonaggregate_records = get_nonaggregate_ancestry_records(client, collection_records, registry_mock_query_f)
 
-    ancestry_records = chain(bundle_records, collection_records, nonaggregate_records)
+    # the order of this chain is now important - writing descendants first ensures that if an ancestor is given a
+    # "processed by sweeper version" flag, it may be assumed that all its descendants have also been processed
+    # this avoids the potential for a bundle/collection to be metadata-marked as up-to-date when execution failed before
+    # its descendants were updated (due to execution interruption, e.g. database overload)
+    ancestry_records = chain(nonaggregate_records, collection_records, bundle_records)
     updates = generate_updates(ancestry_records, ancestry_records_accumulator, bulk_updates_sink)
 
     if bulk_updates_sink is None:
