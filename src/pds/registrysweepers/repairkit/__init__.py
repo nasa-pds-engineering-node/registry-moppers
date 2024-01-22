@@ -14,6 +14,7 @@ from typing import Union
 
 from opensearchpy import OpenSearch
 from pds.registrysweepers.repairkit.versioning import SWEEPERS_REPAIRKIT_VERSION
+from pds.registrysweepers.repairkit.versioning import SWEEPERS_REPAIRKIT_VERSION_METADATA_KEY
 from pds.registrysweepers.utils import configure_logging
 from pds.registrysweepers.utils import parse_args
 from pds.registrysweepers.utils import query_registry_db
@@ -86,19 +87,19 @@ def run(
     configure_logging(filepath=log_filepath, log_level=log_level)
     log.info(f"Starting repairkit v{SWEEPERS_REPAIRKIT_VERSION} sweeper processing...")
 
-    repairkit_version_metadata_key = get_sweeper_version_metadata_key("repairkit")
-
     unprocessed_docs_query = {
         "query": {
-            "bool": {"must_not": [{"range": {repairkit_version_metadata_key: {"gte": SWEEPERS_REPAIRKIT_VERSION}}}]}
+            "bool": {
+                "must_not": [{"range": {SWEEPERS_REPAIRKIT_VERSION_METADATA_KEY: {"gte": SWEEPERS_REPAIRKIT_VERSION}}}]
+            }
         }
     }
 
     # page_size and bulk_chunk_max_update_count constraints are necessary to avoid choking nodes with very-large docs
     # i.e. ATM and GEO
     all_docs = query_registry_db(client, unprocessed_docs_query, {}, page_size=1000)
-    updates = generate_updates(all_docs, repairkit_version_metadata_key, SWEEPERS_REPAIRKIT_VERSION)
-    ensure_index_mapping(client, "registry", repairkit_version_metadata_key, "integer")
+    updates = generate_updates(all_docs, SWEEPERS_REPAIRKIT_VERSION_METADATA_KEY, SWEEPERS_REPAIRKIT_VERSION)
+    ensure_index_mapping(client, "registry", SWEEPERS_REPAIRKIT_VERSION_METADATA_KEY, "integer")
     write_updated_docs(client, updates, bulk_chunk_max_update_count=20000)
 
     log.info("Repairkit sweeper processing complete!")
