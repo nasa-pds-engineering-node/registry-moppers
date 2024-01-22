@@ -9,6 +9,8 @@ from pds.registrysweepers import ancestry
 from pds.registrysweepers.ancestry import AncestryRecord
 from pds.registrysweepers.ancestry import get_collection_ancestry_records
 from pds.registrysweepers.ancestry import get_nonaggregate_ancestry_records
+from pds.registrysweepers.ancestry import SWEEPERS_ANCESTRY_VERSION
+from pds.registrysweepers.ancestry import SWEEPERS_ANCESTRY_VERSION_METADATA_KEY
 from pds.registrysweepers.utils.productidentifiers.pdslidvid import PdsLidVid
 
 from tests.mocks.registryquerymock import RegistryQueryMock
@@ -120,6 +122,8 @@ class AncestryBasicTestCase(unittest.TestCase):
                 set(update["ops:Provenance/ops:parent_collection_identifier"]),
             )
 
+            self.assertEqual(SWEEPERS_ANCESTRY_VERSION, update[SWEEPERS_ANCESTRY_VERSION_METADATA_KEY])
+
         for doc_id, update in self.bulk_updates:
             record = self.records_by_lidvid_str[doc_id]
             self.assertEqual(
@@ -130,6 +134,8 @@ class AncestryBasicTestCase(unittest.TestCase):
                 set(update["ops:Provenance/ops:parent_collection_identifier"]),
                 set(str(lidvid) for lidvid in record.parent_collection_lidvids),
             )
+
+            self.assertEqual(SWEEPERS_ANCESTRY_VERSION, update[SWEEPERS_ANCESTRY_VERSION_METADATA_KEY])
 
 
 class AncestryAlternateIdsTestCase(unittest.TestCase):

@@ -87,6 +87,7 @@ def generate_updates(
         update_content = {
             METADATA_PARENT_BUNDLE_KEY: [str(id) for id in record.parent_bundle_lidvids],
             METADATA_PARENT_COLLECTION_KEY: [str(id) for id in record.parent_collection_lidvids],
+            SWEEPERS_ANCESTRY_VERSION_METADATA_KEY: int(SWEEPERS_ANCESTRY_VERSION),
         }
 
         # Tee the stream of bulk update KVs into the accumulator, if one was provided (functional testing).
