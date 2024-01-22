@@ -14,6 +14,8 @@ from pds.registrysweepers.ancestry.ancestryrecord import AncestryRecord
 from pds.registrysweepers.ancestry.generation import get_bundle_ancestry_records
 from pds.registrysweepers.ancestry.generation import get_collection_ancestry_records
 from pds.registrysweepers.ancestry.generation import get_nonaggregate_ancestry_records
+from pds.registrysweepers.ancestry.versioning import SWEEPERS_ANCESTRY_VERSION
+from pds.registrysweepers.ancestry.versioning import SWEEPERS_ANCESTRY_VERSION_METADATA_KEY
 from pds.registrysweepers.utils import configure_logging
 from pds.registrysweepers.utils import parse_args
 from pds.registrysweepers.utils.db import write_updated_docs
@@ -48,7 +50,8 @@ def run(
     # this avoids the potential for a bundle/collection to be metadata-marked as up-to-date when execution failed before
     # its descendants were updated (due to execution interruption, e.g. database overload)
     ancestry_records = chain(nonaggregate_records, collection_records, bundle_records)
-    updates = generate_updates(ancestry_records, ancestry_records_accumulator, bulk_updates_sink)
+    ancestry_records_to_write = filter(lambda r: not r.skip_write, ancestry_records)
+    updates = generate_updates(ancestry_records_to_write, ancestry_records_accumulator, bulk_updates_sink)
 
     if bulk_updates_sink is None:
         log.info("Ensuring metadata keys are present in database index...")

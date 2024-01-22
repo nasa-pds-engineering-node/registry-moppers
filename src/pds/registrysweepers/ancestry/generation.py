@@ -23,6 +23,8 @@ from pds.registrysweepers.ancestry.utils import dump_history_to_disk
 from pds.registrysweepers.ancestry.utils import load_partial_history_to_records
 from pds.registrysweepers.ancestry.utils import make_history_serializable
 from pds.registrysweepers.ancestry.utils import merge_matching_history_chunks
+from pds.registrysweepers.ancestry.versioning import SWEEPERS_ANCESTRY_VERSION
+from pds.registrysweepers.ancestry.versioning import SWEEPERS_ANCESTRY_VERSION_METADATA_KEY
 from pds.registrysweepers.utils.misc import coerce_list_type
 from pds.registrysweepers.utils.productidentifiers.factory import PdsProductIdentifierFactory
 from pds.registrysweepers.utils.productidentifiers.pdslid import PdsLid
@@ -36,7 +38,9 @@ def get_bundle_ancestry_records(client: OpenSearch, db_mock: DbMockTypeDef = Non
     docs = get_bundle_ancestry_records_query(client, db_mock)
     for doc in docs:
         try:
-            yield AncestryRecord(lidvid=PdsLidVid.from_string(doc["_source"]["lidvid"]))
+            sweeper_version_in_doc = doc["_source"].get(SWEEPERS_ANCESTRY_VERSION_METADATA_KEY, 0)
+            skip_write = sweeper_version_in_doc >= SWEEPERS_ANCESTRY_VERSION
+            yield AncestryRecord(lidvid=PdsLidVid.from_string(doc["_source"]["lidvid"]), skip_write=skip_write)
         except (ValueError, KeyError) as err:
             log.warning(
                 'Failed to instantiate AncestryRecord from document in index "%s" with id "%s" due to %s: %s',
@@ -54,8 +58,10 @@ def get_ancestry_by_collection_lidvid(collections_docs: Iterable[Dict]) -> Mappi
     ancestry_by_collection_lidvid = {}
     for doc in collections_docs:
         try:
+            sweeper_version_in_doc = doc["_source"].get(SWEEPERS_ANCESTRY_VERSION_METADATA_KEY, 0)
+            skip_write = sweeper_version_in_doc >= SWEEPERS_ANCESTRY_VERSION
             lidvid = PdsLidVid.from_string(doc["_source"]["lidvid"])
-            ancestry_by_collection_lidvid[lidvid] = AncestryRecord(lidvid=lidvid)
+            ancestry_by_collection_lidvid[lidvid] = AncestryRecord(lidvid=lidvid, skip_write=skip_write)
         except (ValueError, KeyError) as err:
             log.warning(
                 'Failed to instantiate AncestryRecord from document in index "%s" with id "%s" due to %s: %s',
@@ -107,8 +113,12 @@ def get_collection_ancestry_records(
     collection_aliases_by_lid: Dict[PdsLid, Set[PdsLid]] = get_collection_aliases_by_lid(collections_docs)
 
     # Prepare empty ancestry records for collections, with fast access by LID or LIDVID
-    ancestry_by_collection_lidvid = get_ancestry_by_collection_lidvid(collections_docs)
-    ancestry_by_collection_lid = get_ancestry_by_collection_lid(ancestry_by_collection_lidvid)
+    ancestry_by_collection_lidvid: Mapping[PdsLidVid, AncestryRecord] = get_ancestry_by_collection_lidvid(
+        collections_docs
+    )
+    ancestry_by_collection_lid: Mapping[PdsLid, Set[AncestryRecord]] = get_ancestry_by_collection_lid(
+        ancestry_by_collection_lidvid
+    )
 
     # For each bundle, add it to the bundle-ancestry of every collection it references
     for doc in bundles_docs:

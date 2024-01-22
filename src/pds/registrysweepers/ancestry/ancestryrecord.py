@@ -16,6 +16,10 @@ class AncestryRecord:
     parent_collection_lidvids: Set[PdsLidVid] = field(default_factory=set)
     parent_bundle_lidvids: Set[PdsLidVid] = field(default_factory=set)
 
+    # flag to track records which are used during processing, but should not be written to db, for example if an
+    # equivalent record is known to already exist due to up-to-date ancestry version flag in the source document
+    skip_write: bool = False
+
     def __repr__(self):
         return f"AncestryRecord(lidvid={self.lidvid}, parent_collection_lidvids={sorted([str(x) for x in self.parent_collection_lidvids])}, parent_bundle_lidvids={sorted([str(x) for x in self.parent_bundle_lidvids])})"
 
@@ -32,7 +36,7 @@ class AncestryRecord:
         }
 
     @staticmethod
-    def from_dict(d: SerializableAncestryRecordTypeDef) -> AncestryRecord:
+    def from_dict(d: SerializableAncestryRecordTypeDef, skip_write: bool = False) -> AncestryRecord:
         try:
             return AncestryRecord(
                 lidvid=PdsLidVid.from_string(d["lidvid"]),  # type: ignore
@@ -40,6 +44,7 @@ class AncestryRecord:
                     PdsLidVid.from_string(lidvid) for lidvid in d["parent_collection_lidvids"]
                 ),
                 parent_bundle_lidvids=set(PdsLidVid.from_string(lidvid) for lidvid in d["parent_bundle_lidvids"]),
+                skip_write=skip_write,
             )
         except (KeyError, ValueError) as err:
             raise ValueError(

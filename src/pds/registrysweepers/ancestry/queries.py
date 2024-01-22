@@ -35,7 +35,7 @@ def product_class_query_factory(cls: ProductClass) -> Dict:
 
 def get_bundle_ancestry_records_query(client: OpenSearch, db_mock: DbMockTypeDef = None) -> Iterable[Dict]:
     query = product_class_query_factory(ProductClass.BUNDLE)
-    _source = {"includes": ["lidvid"]}
+    _source = {"includes": ["lidvid", SWEEPERS_ANCESTRY_VERSION_METADATA_KEY]}
     query_f = query_registry_db_or_mock(db_mock, "get_bundle_ancestry_records", use_search_after=True)
     docs = query_f(client, query, _source)
 
@@ -56,7 +56,7 @@ def get_collection_ancestry_records_collections_query(
 ) -> Iterable[Dict]:
     # Query the registry for all collection identifiers
     query = product_class_query_factory(ProductClass.COLLECTION)
-    _source = {"includes": ["lidvid", "alternate_ids"]}
+    _source = {"includes": ["lidvid", "alternate_ids", SWEEPERS_ANCESTRY_VERSION_METADATA_KEY]}
     query_f = query_registry_db_or_mock(db_mock, "get_collection_ancestry_records_collections", use_search_after=True)
     docs = query_f(client, query, _source)
 
