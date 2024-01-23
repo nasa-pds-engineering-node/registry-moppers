@@ -46,12 +46,16 @@ ENV INSTALL_WORKDIR=/tmp/registry-sweepers
 
 COPY . $INSTALL_WORKDIR
 
-RUN apt-get update && \
-    apt-get upgrade -y && \
-    apt-get install -y git
+RUN apt-get update --quiet && \
+    apt-get upgrade --quiet --yes && \
+    apt-get install --quiet --yes git gcc python3-dev
 
 RUN pip install $INSTALL_WORKDIR \
  && cp $INSTALL_WORKDIR/docker/sweepers_driver.py /usr/local/bin/ \
  && rm -r $INSTALL_WORKDIR
+
+RUN apt-get autoremove && \
+    apt-get remove --quiet --yes gcc python3-dev && \
+    rm --force --recursive /var/lib/apt/lists/*
 
 CMD ["/usr/local/bin/sweepers_driver.py"]
