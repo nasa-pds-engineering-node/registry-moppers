@@ -4,6 +4,7 @@ import os
 import shutil
 import sys
 import tempfile
+from collections import namedtuple
 from typing import Dict
 from typing import Iterable
 from typing import List
@@ -25,12 +26,20 @@ from pds.registrysweepers.ancestry.utils import make_history_serializable
 from pds.registrysweepers.ancestry.utils import merge_matching_history_chunks
 from pds.registrysweepers.ancestry.versioning import SWEEPERS_ANCESTRY_VERSION
 from pds.registrysweepers.ancestry.versioning import SWEEPERS_ANCESTRY_VERSION_METADATA_KEY
+from pds.registrysweepers.utils.db import Update
+from pds.registrysweepers.utils.db import write_updated_docs
 from pds.registrysweepers.utils.misc import coerce_list_type
 from pds.registrysweepers.utils.productidentifiers.factory import PdsProductIdentifierFactory
 from pds.registrysweepers.utils.productidentifiers.pdslid import PdsLid
 from pds.registrysweepers.utils.productidentifiers.pdslidvid import PdsLidVid
 
 log = logging.getLogger(__name__)
+
+# It's necessary to track which registry-refs documents have been processed during this run.  This cannot be derived
+# by repeating the query, as the sweeper may be running concurrently with harvest, and document content may change.
+# RefDocBookkeepingEntry is used to ensure that only those documents which have been processed and have not been
+# externally modified during sweeper execution will be marked as processed with the current sweeper version.
+RefDocBookkeepingEntry = namedtuple("RefDocBookkeepingEntry", ["id", "primary_term", "seq_no"])
 
 
 def get_bundle_ancestry_records(client: OpenSearch, db_mock: DbMockTypeDef = None) -> Iterable[AncestryRecord]:
@@ -248,6 +257,7 @@ def _get_nonaggregate_ancestry_records_with_chunking(
     log.debug(f"dumping partial non-aggregate ancestry result-sets to {on_disk_cache_dir}")
 
     collection_refs_query_docs = get_nonaggregate_ancestry_records_query(client, registry_db_mock)
+    touched_ref_documents: List[RefDocBookkeepingEntry] = []
 
     baseline_memory_usage = psutil.virtual_memory().percent
     user_configured_max_memory_usage = AncestryRuntimeConstants.max_acceptable_memory_usage
@@ -291,9 +301,14 @@ def _get_nonaggregate_ancestry_records_with_chunking(
                     )  # slightly problematic due to reuse of pointers vs actual values, but let's try it
                     nonaggregate_ancestry_records_by_lidvid = {}
 
+            # mark collection for metadata update
+            touched_ref_documents.append(
+                RefDocBookkeepingEntry(id=doc["_id"], primary_term=doc["_primary_term"], seq_no=doc["_seq_no"])
+            )
+
         except (ValueError, KeyError) as err:
             log.warning(
-                'Failed to parse collection and/or product LIDVIDs from document in index "%s" with id "%s" due to %s: %s',
+                'Collection not found or failed to parse collection and/or product LIDVIDs from document in index "%s" with id "%s" due to %s: %s',
                 doc.get("_index"),
                 doc.get("_id"),
                 type(err).__name__,
@@ -330,3 +345,31 @@ def _get_nonaggregate_ancestry_records_with_chunking(
 
     if not using_cache_override:
         shutil.rmtree(on_disk_cache_dir)
+
+    # See race condition comment in function def
+    update_refs_document_metadata(client, touched_ref_documents)
+
+
+def update_refs_document_metadata(client: OpenSearch, docs: List[RefDocBookkeepingEntry]):
+    """
+    Write ancestry version metadata for all collection-page documents for which AncestryRecords were successfully
+    produced.
+    Subject to a race condition where this will be called when the final AncestryRecord is yielded, and therefore may
+    write metadata before the final page of AncestryRecords is written to the db (which may fail).  This is an
+    acceptably-small risk for now given that we can detect orphaned documents, but may need to be refactored later.
+    """
+
+    def generate_update(doc: RefDocBookkeepingEntry) -> Update:
+        return Update(
+            id=doc.id,
+            primary_term=doc.primary_term,
+            seq_no=doc.seq_no,
+            content={SWEEPERS_ANCESTRY_VERSION_METADATA_KEY: SWEEPERS_ANCESTRY_VERSION},
+        )
+
+    updates = map(generate_update, docs)
+    logging.info(
+        f"Updating {len(docs)} registry-refs docs with {SWEEPERS_ANCESTRY_VERSION_METADATA_KEY}={SWEEPERS_ANCESTRY_VERSION}"
+    )
+    write_updated_docs(client, updates, index_name="registry-refs", bulk_chunk_max_update_count=20000)
+    logging.info("registry-refs metadata update complete")

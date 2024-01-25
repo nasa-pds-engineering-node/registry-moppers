@@ -65,7 +65,7 @@ def get_collection_ancestry_records_collections_query(
 
 def get_nonaggregate_ancestry_records_query(client: OpenSearch, registry_db_mock: DbMockTypeDef) -> Iterable[Dict]:
     # Query the registry-refs index for the contents of all collections
-    query: Dict = {"query": {"match_all": {}}}
+    query: Dict = {"query": {"match_all": {}}, "seq_no_primary_term": True}
     _source = {"includes": ["collection_lidvid", "batch_id", "product_lidvid"]}
     query_f = query_registry_db_or_mock(registry_db_mock, "get_nonaggregate_ancestry_records", use_search_after=True)
 
