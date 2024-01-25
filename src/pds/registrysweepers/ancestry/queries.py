@@ -8,6 +8,8 @@ from typing import Optional
 
 from opensearchpy import OpenSearch
 from pds.registrysweepers.ancestry.runtimeconstants import AncestryRuntimeConstants
+from pds.registrysweepers.ancestry.versioning import SWEEPERS_ANCESTRY_VERSION
+from pds.registrysweepers.ancestry.versioning import SWEEPERS_ANCESTRY_VERSION_METADATA_KEY
 from pds.registrysweepers.utils.db import query_registry_db_or_mock
 
 log = logging.getLogger(__name__)
@@ -65,7 +67,14 @@ def get_collection_ancestry_records_collections_query(
 
 def get_nonaggregate_ancestry_records_query(client: OpenSearch, registry_db_mock: DbMockTypeDef) -> Iterable[Dict]:
     # Query the registry-refs index for the contents of all collections
-    query: Dict = {"query": {"match_all": {}}, "seq_no_primary_term": True}
+    query: Dict = {
+        "query": {
+            "bool": {
+                "must_not": [{"range": {SWEEPERS_ANCESTRY_VERSION_METADATA_KEY: {"gte": SWEEPERS_ANCESTRY_VERSION}}}]
+            }
+        },
+        "seq_no_primary_term": True,
+    }
     _source = {"includes": ["collection_lidvid", "batch_id", "product_lidvid"]}
     query_f = query_registry_db_or_mock(registry_db_mock, "get_nonaggregate_ancestry_records", use_search_after=True)
 
