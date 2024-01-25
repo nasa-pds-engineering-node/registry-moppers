@@ -55,8 +55,17 @@ def run(
 
     if bulk_updates_sink is None:
         log.info("Ensuring metadata keys are present in database index...")
-        for metadata_key in [METADATA_PARENT_BUNDLE_KEY, METADATA_PARENT_COLLECTION_KEY]:
+        for metadata_key in [
+            METADATA_PARENT_BUNDLE_KEY,
+            METADATA_PARENT_COLLECTION_KEY,
+            SWEEPERS_ANCESTRY_VERSION_METADATA_KEY,
+        ]:
             ensure_index_mapping(client, "registry", metadata_key, "keyword")
+
+        for metadata_key in [
+            SWEEPERS_ANCESTRY_VERSION_METADATA_KEY,
+        ]:
+            ensure_index_mapping(client, "registry-refs", metadata_key, "keyword")
 
         log.info("Writing bulk updates to database...")
         write_updated_docs(client, updates)
