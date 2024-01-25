@@ -14,6 +14,7 @@ from pds.registrysweepers.ancestry.ancestryrecord import AncestryRecord
 from pds.registrysweepers.ancestry.generation import get_bundle_ancestry_records
 from pds.registrysweepers.ancestry.generation import get_collection_ancestry_records
 from pds.registrysweepers.ancestry.generation import get_nonaggregate_ancestry_records
+from pds.registrysweepers.ancestry.queries import get_orphaned_documents
 from pds.registrysweepers.ancestry.versioning import SWEEPERS_ANCESTRY_VERSION
 from pds.registrysweepers.ancestry.versioning import SWEEPERS_ANCESTRY_VERSION_METADATA_KEY
 from pds.registrysweepers.utils import configure_logging
@@ -73,6 +74,16 @@ def run(
         # consume generator to dump bulk updates to sink
         for _ in updates:
             pass
+
+    log.info("Checking indexes for orphaned documents")
+    for index_name in ["registry", "registry-refs"]:
+        orphaned_docs = get_orphaned_documents(client, registry_mock_query_f, index_name)
+        orphaned_doc_ids = [doc.get("_id") for doc in orphaned_docs]
+        orphaned_doc_count = len(orphaned_doc_ids)
+        if orphaned_doc_count > 0:
+            log.error(
+                f'Detected {orphaned_doc_count} orphaned documents in index "{index_name} - please inform developers": {orphaned_doc_ids}'
+            )
 
     log.info("Ancestry sweeper processing complete!")
 

@@ -90,3 +90,25 @@ def get_nonaggregate_ancestry_records_query(client: OpenSearch, registry_db_mock
     )
 
     return docs
+
+
+def get_orphaned_documents(client: OpenSearch, registry_db_mock: DbMockTypeDef, index_name: str) -> Iterable[Dict]:
+    # Query an index documents without an up-to-date ancestry version reference - this would indicate a product which is
+    # orphaned and is getting missed in processing
+    query: Dict = {
+        "query": {
+            "bool": {
+                "must_not": [{"range": {SWEEPERS_ANCESTRY_VERSION_METADATA_KEY: {"gte": SWEEPERS_ANCESTRY_VERSION}}}]
+            }
+        }
+    }
+    _source: Dict = {"includes": []}
+    query_f = query_registry_db_or_mock(registry_db_mock, "get_orphaned_ancestry_docs", use_search_after=True)
+
+    sort_fields_override = (
+        ["collection_lidvid", "batch_id"] if index_name == "registry-refs" else None
+    )  # use default for registry
+
+    docs = query_f(client, query, _source, index_name=index_name, sort_fields=sort_fields_override)
+
+    return docs
