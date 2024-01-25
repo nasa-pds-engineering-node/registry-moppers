@@ -2,6 +2,7 @@ import json
 import logging
 import math
 import sys
+from typing import Any
 from typing import Callable
 from typing import Dict
 from typing import Iterable
@@ -284,7 +285,12 @@ def write_updated_docs(
 
 def update_as_statements(update: Update) -> Iterable[str]:
     """Given an Update, convert it to an ElasticSearch-style set of request body content strings"""
-    update_objs = [{"update": {"_id": update.id}}, {"doc": update.content}]
+    metadata_statement: Dict[str, Any] = {"update": {"_id": update.id}}
+    if update.has_versioning_information():
+        metadata_statement["if_primary_term"] = update.primary_term
+        metadata_statement["if_seq_no"] = update.seq_no
+    content_statement = {"doc": update.content}
+    update_objs = [metadata_statement, content_statement]
     updates_strs = [json.dumps(obj) for obj in update_objs]
     return updates_strs
 
