@@ -75,7 +75,11 @@ def run(
     successors = get_successors_by_lidvid(extant_lidvids)
     updates = generate_updates(successors)
 
-    write_updated_docs(client, updates)
+    write_updated_docs(
+        client,
+        updates,
+        index_name="registry",
+    )
 
     log.info("Completed provenance sweeper processing!")
 

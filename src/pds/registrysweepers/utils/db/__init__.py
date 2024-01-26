@@ -240,7 +240,7 @@ def query_registry_db_or_mock(
 def write_updated_docs(
     client: OpenSearch,
     updates: Iterable[Update],
-    index_name: str = "registry",
+    index_name: str,
     bulk_chunk_max_update_count: Union[int, None] = None,
 ):
     log.info("Updating a lazily-generated collection of product documents...")

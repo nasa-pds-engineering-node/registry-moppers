@@ -100,7 +100,7 @@ def run(
     all_docs = query_registry_db(client, unprocessed_docs_query, {}, page_size=1000)
     updates = generate_updates(all_docs, SWEEPERS_REPAIRKIT_VERSION_METADATA_KEY, SWEEPERS_REPAIRKIT_VERSION)
     ensure_index_mapping(client, "registry", SWEEPERS_REPAIRKIT_VERSION_METADATA_KEY, "integer")
-    write_updated_docs(client, updates, bulk_chunk_max_update_count=20000)
+    write_updated_docs(client, updates, index_name="registry", bulk_chunk_max_update_count=20000)
 
     log.info("Repairkit sweeper processing complete!")
 

@@ -69,7 +69,11 @@ def run(
             ensure_index_mapping(client, "registry-refs", metadata_key, "keyword")
 
         log.info("Writing bulk updates to database...")
-        write_updated_docs(client, updates)
+        write_updated_docs(
+            client,
+            updates,
+            index_name="registry",
+        )
     else:
         # consume generator to dump bulk updates to sink
         for _ in updates:
