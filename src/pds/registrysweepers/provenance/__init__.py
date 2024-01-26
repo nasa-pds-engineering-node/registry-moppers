@@ -110,6 +110,9 @@ def link_records_in_chain(record_chain: List[ProvenanceRecord]):
     """
     Given a List of ProvenanceRecords sharing the same LID, sort the list and create all elements' successor links
     """
+
+    # this can theoretically be disabled for a minor performance improvement as records are already sorted when queried
+    # but the benefit is likely to be minimal, and it's safer not to assume
     record_chain.sort(key=lambda record: record.lidvid)
 
     for i in range(len(record_chain) - 1):
