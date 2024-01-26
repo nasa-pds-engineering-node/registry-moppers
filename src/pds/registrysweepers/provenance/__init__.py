@@ -148,7 +148,7 @@ def generate_updates(records: Iterable[ProvenanceRecord]) -> Iterable[Update]:
     skipped_count = 0
     for record in records:
         update_content = {
-            METADATA_SUCCESSOR_KEY: str(record.successor),
+            METADATA_SUCCESSOR_KEY: str(record.successor) if record.successor else None,
             SWEEPERS_PROVENANCE_VERSION_METADATA_KEY: SWEEPERS_PROVENANCE_VERSION,
         }
 

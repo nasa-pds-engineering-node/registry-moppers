@@ -30,7 +30,7 @@ class ProvenanceRecord:
 
     @staticmethod
     def from_source(_source: Dict) -> ProvenanceRecord:
-        if METADATA_SUCCESSOR_KEY in _source:
+        if METADATA_SUCCESSOR_KEY in _source and _source[METADATA_SUCCESSOR_KEY] is not None:
             successor = PdsLidVid.from_string(_source[METADATA_SUCCESSOR_KEY])
         else:
             successor = None
