@@ -22,9 +22,9 @@ log = logging.getLogger(__name__)
 
 def query_registry_db(
     client: OpenSearch,
+    index_name: str,
     query: Dict,
     _source: Dict,
-    index_name: str = "registry",
     page_size: int = 10000,
     scroll_keepalive_minutes: int = 10,
     request_timeout_seconds: int = 20,
@@ -119,9 +119,9 @@ def query_registry_db(
 
 def query_registry_db_with_search_after(
     client: OpenSearch,
+    index_name: str,
     query: Dict,
     _source: Dict,
-    index_name: str = "registry",
     page_size: int = 10000,
     sort_fields: Union[List[str], None] = None,
     request_timeout_seconds: int = 20,
@@ -214,15 +214,17 @@ def query_registry_db_with_search_after(
 
 
 def query_registry_db_or_mock(
-    mock_f: Optional[Callable[[str], Iterable[Dict]]], mock_query_id: str, use_search_after: bool = False
+    mock_f: Optional[Callable[[str], Iterable[Dict]]],
+    mock_query_id: str,
+    use_search_after: bool = False,
 ):
     if mock_f is not None:
 
         def mock_wrapper(
             client: OpenSearch,
+            index_name: str,
             query: Dict,
             _source: Dict,
-            index_name: str = "registry",
             page_size: int = 10000,
             scroll_validity_duration_minutes: int = 10,
             request_timeout_seconds: int = 20,
@@ -372,6 +374,6 @@ def get_extant_lidvids(client: OpenSearch) -> Iterable[str]:
     }
     _source = {"includes": ["lidvid"]}
 
-    results = query_registry_db(client, query, _source, scroll_keepalive_minutes=1)
+    results = query_registry_db(client, "registry", query, _source, scroll_keepalive_minutes=1)
 
     return map(lambda doc: doc["_source"]["lidvid"], results)
