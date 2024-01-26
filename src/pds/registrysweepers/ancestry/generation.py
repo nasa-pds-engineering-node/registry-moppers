@@ -10,6 +10,7 @@ from typing import Iterable
 from typing import List
 from typing import Mapping
 from typing import Set
+from typing import Union
 
 import psutil  # type: ignore
 from opensearchpy import OpenSearch
@@ -272,10 +273,12 @@ def _get_nonaggregate_ancestry_records_with_chunking(
         0  # populated based on the largest encountered chunk.  see split_chunk_if_oversized() for explanation
     )
 
+    most_recent_attempted_collection_lidvid: Union[PdsLidVid, None] = None
     nonaggregate_ancestry_records_by_lidvid = {}
     for doc in collection_refs_query_docs:
         try:
             collection_lidvid = PdsLidVid.from_string(doc["_source"]["collection_lidvid"])
+            most_recent_attempted_collection_lidvid = collection_lidvid
             for nonaggregate_lidvid_str in doc["_source"]["product_lidvid"]:
                 bundle_ancestry = bundle_ancestry_by_collection_lidvid[collection_lidvid]
 
@@ -307,13 +310,17 @@ def _get_nonaggregate_ancestry_records_with_chunking(
             )
 
         except (ValueError, KeyError) as err:
-            log.warning(
-                'Collection not found or failed to parse collection and/or product LIDVIDs from document in index "%s" with id "%s" due to %s: %s',
-                doc.get("_index"),
-                doc.get("_id"),
-                type(err).__name__,
-                err,
-            )
+            if (
+                isinstance(err, KeyError)
+                and most_recent_attempted_collection_lidvid not in bundle_ancestry_by_collection_lidvid
+            ):
+                probable_cause = f'[Probable Cause]: Collection primary document with id "{doc["_source"].get("collection_lidvid")}" not found in index "registry" for registry-refs doc with id "{doc.get("_id")}"'
+            elif isinstance(err, ValueError):
+                probable_cause = f'[Probable Cause]: Failed to parse collection and/or product LIDVIDs from document with id "{doc.get("_id")}" in index "{doc.get("_index")}" due to {type(err).__name__}: {err}'
+            else:
+                probable_cause = f"Unknown error due to {type(err).__name__}: {err}"
+
+            log.warning(probable_cause)
             continue
 
     # don't forget to yield non-disk-dumped records
