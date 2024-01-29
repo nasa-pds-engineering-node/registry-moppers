@@ -128,7 +128,7 @@ def run(
 ):
     configure_logging(filepath=log_filepath, log_level=log_level)
 
-    log.info("Starting provenance sweeper processing...")
+    log.info(f"Starting provenance v{SWEEPERS_PROVENANCE_VERSION} sweeper processing...")
 
     records = get_records(client)
     record_chains = create_record_chains(records)
