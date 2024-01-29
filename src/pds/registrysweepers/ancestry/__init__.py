@@ -40,7 +40,7 @@ def run(
 ):
     configure_logging(filepath=log_filepath, log_level=log_level)
 
-    log.info("Starting ancestry sweeper")
+    log.info(f"Starting ancestry v{SWEEPERS_ANCESTRY_VERSION} sweeper processing...")
 
     bundle_records = get_bundle_ancestry_records(client, registry_mock_query_f)
     collection_records = list(get_collection_ancestry_records(client, registry_mock_query_f))
