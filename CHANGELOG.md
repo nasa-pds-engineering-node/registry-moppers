@@ -1,8 +1,20 @@
 # Changelog
 
-## [release/1.2.1](https://github.com/NASA-PDS/registry-sweepers/tree/release/1.2.1) (2024-01-23)
+## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2024-01-29)
 
-[Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/v1.2.0...release/1.2.1)
+[Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/v1.2.1...«unknown»)
+
+**Requirements:**
+
+- Investigate/implement non-redundant ancestry processing [\#91](https://github.com/NASA-PDS/registry-sweepers/issues/91)
+
+**Improvements:**
+
+- Investigate/implement non-redundant provenance processing [\#92](https://github.com/NASA-PDS/registry-sweepers/issues/92)
+
+## [v1.2.1](https://github.com/NASA-PDS/registry-sweepers/tree/v1.2.1) (2024-01-24)
+
+[Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/v1.2.0...v1.2.1)
 
 **Defects:**
 
