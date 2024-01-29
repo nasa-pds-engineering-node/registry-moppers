@@ -4,11 +4,13 @@ import os
 import shutil
 import sys
 import tempfile
+from collections import namedtuple
 from typing import Dict
 from typing import Iterable
 from typing import List
 from typing import Mapping
 from typing import Set
+from typing import Union
 
 import psutil  # type: ignore
 from opensearchpy import OpenSearch
@@ -23,6 +25,10 @@ from pds.registrysweepers.ancestry.utils import dump_history_to_disk
 from pds.registrysweepers.ancestry.utils import load_partial_history_to_records
 from pds.registrysweepers.ancestry.utils import make_history_serializable
 from pds.registrysweepers.ancestry.utils import merge_matching_history_chunks
+from pds.registrysweepers.ancestry.versioning import SWEEPERS_ANCESTRY_VERSION
+from pds.registrysweepers.ancestry.versioning import SWEEPERS_ANCESTRY_VERSION_METADATA_KEY
+from pds.registrysweepers.utils.db import Update
+from pds.registrysweepers.utils.db import write_updated_docs
 from pds.registrysweepers.utils.misc import coerce_list_type
 from pds.registrysweepers.utils.productidentifiers.factory import PdsProductIdentifierFactory
 from pds.registrysweepers.utils.productidentifiers.pdslid import PdsLid
@@ -30,13 +36,21 @@ from pds.registrysweepers.utils.productidentifiers.pdslidvid import PdsLidVid
 
 log = logging.getLogger(__name__)
 
+# It's necessary to track which registry-refs documents have been processed during this run.  This cannot be derived
+# by repeating the query, as the sweeper may be running concurrently with harvest, and document content may change.
+# RefDocBookkeepingEntry is used to ensure that only those documents which have been processed and have not been
+# externally modified during sweeper execution will be marked as processed with the current sweeper version.
+RefDocBookkeepingEntry = namedtuple("RefDocBookkeepingEntry", ["id", "primary_term", "seq_no"])
+
 
 def get_bundle_ancestry_records(client: OpenSearch, db_mock: DbMockTypeDef = None) -> Iterable[AncestryRecord]:
     log.info("Generating AncestryRecords for bundles...")
     docs = get_bundle_ancestry_records_query(client, db_mock)
     for doc in docs:
         try:
-            yield AncestryRecord(lidvid=PdsLidVid.from_string(doc["_source"]["lidvid"]))
+            sweeper_version_in_doc = doc["_source"].get(SWEEPERS_ANCESTRY_VERSION_METADATA_KEY, 0)
+            skip_write = sweeper_version_in_doc >= SWEEPERS_ANCESTRY_VERSION
+            yield AncestryRecord(lidvid=PdsLidVid.from_string(doc["_source"]["lidvid"]), skip_write=skip_write)
         except (ValueError, KeyError) as err:
             log.warning(
                 'Failed to instantiate AncestryRecord from document in index "%s" with id "%s" due to %s: %s',
@@ -54,8 +68,10 @@ def get_ancestry_by_collection_lidvid(collections_docs: Iterable[Dict]) -> Mappi
     ancestry_by_collection_lidvid = {}
     for doc in collections_docs:
         try:
+            sweeper_version_in_doc = doc["_source"].get(SWEEPERS_ANCESTRY_VERSION_METADATA_KEY, 0)
+            skip_write = sweeper_version_in_doc >= SWEEPERS_ANCESTRY_VERSION
             lidvid = PdsLidVid.from_string(doc["_source"]["lidvid"])
-            ancestry_by_collection_lidvid[lidvid] = AncestryRecord(lidvid=lidvid)
+            ancestry_by_collection_lidvid[lidvid] = AncestryRecord(lidvid=lidvid, skip_write=skip_write)
         except (ValueError, KeyError) as err:
             log.warning(
                 'Failed to instantiate AncestryRecord from document in index "%s" with id "%s" due to %s: %s',
@@ -107,8 +123,12 @@ def get_collection_ancestry_records(
     collection_aliases_by_lid: Dict[PdsLid, Set[PdsLid]] = get_collection_aliases_by_lid(collections_docs)
 
     # Prepare empty ancestry records for collections, with fast access by LID or LIDVID
-    ancestry_by_collection_lidvid = get_ancestry_by_collection_lidvid(collections_docs)
-    ancestry_by_collection_lid = get_ancestry_by_collection_lid(ancestry_by_collection_lidvid)
+    ancestry_by_collection_lidvid: Mapping[PdsLidVid, AncestryRecord] = get_ancestry_by_collection_lidvid(
+        collections_docs
+    )
+    ancestry_by_collection_lid: Mapping[PdsLid, Set[AncestryRecord]] = get_ancestry_by_collection_lid(
+        ancestry_by_collection_lidvid
+    )
 
     # For each bundle, add it to the bundle-ancestry of every collection it references
     for doc in bundles_docs:
@@ -238,6 +258,7 @@ def _get_nonaggregate_ancestry_records_with_chunking(
     log.debug(f"dumping partial non-aggregate ancestry result-sets to {on_disk_cache_dir}")
 
     collection_refs_query_docs = get_nonaggregate_ancestry_records_query(client, registry_db_mock)
+    touched_ref_documents: List[RefDocBookkeepingEntry] = []
 
     baseline_memory_usage = psutil.virtual_memory().percent
     user_configured_max_memory_usage = AncestryRuntimeConstants.max_acceptable_memory_usage
@@ -252,10 +273,12 @@ def _get_nonaggregate_ancestry_records_with_chunking(
         0  # populated based on the largest encountered chunk.  see split_chunk_if_oversized() for explanation
     )
 
+    most_recent_attempted_collection_lidvid: Union[PdsLidVid, None] = None
     nonaggregate_ancestry_records_by_lidvid = {}
     for doc in collection_refs_query_docs:
         try:
             collection_lidvid = PdsLidVid.from_string(doc["_source"]["collection_lidvid"])
+            most_recent_attempted_collection_lidvid = collection_lidvid
             for nonaggregate_lidvid_str in doc["_source"]["product_lidvid"]:
                 bundle_ancestry = bundle_ancestry_by_collection_lidvid[collection_lidvid]
 
@@ -281,21 +304,33 @@ def _get_nonaggregate_ancestry_records_with_chunking(
                     )  # slightly problematic due to reuse of pointers vs actual values, but let's try it
                     nonaggregate_ancestry_records_by_lidvid = {}
 
-        except (ValueError, KeyError) as err:
-            log.warning(
-                'Failed to parse collection and/or product LIDVIDs from document in index "%s" with id "%s" due to %s: %s',
-                doc.get("_index"),
-                doc.get("_id"),
-                type(err).__name__,
-                err,
+            # mark collection for metadata update
+            touched_ref_documents.append(
+                RefDocBookkeepingEntry(id=doc["_id"], primary_term=doc["_primary_term"], seq_no=doc["_seq_no"])
             )
+
+        except (ValueError, KeyError) as err:
+            if (
+                isinstance(err, KeyError)
+                and most_recent_attempted_collection_lidvid not in bundle_ancestry_by_collection_lidvid
+            ):
+                probable_cause = f'[Probable Cause]: Collection primary document with id "{doc["_source"].get("collection_lidvid")}" not found in index "registry" for registry-refs doc with id "{doc.get("_id")}"'
+            elif isinstance(err, ValueError):
+                probable_cause = f'[Probable Cause]: Failed to parse collection and/or product LIDVIDs from document with id "{doc.get("_id")}" in index "{doc.get("_index")}" due to {type(err).__name__}: {err}'
+            else:
+                probable_cause = f"Unknown error due to {type(err).__name__}: {err}"
+
+            log.warning(probable_cause)
             continue
 
     # don't forget to yield non-disk-dumped records
     make_history_serializable(nonaggregate_ancestry_records_by_lidvid)
     chunk_size_max = max(chunk_size_max, sys.getsizeof(nonaggregate_ancestry_records_by_lidvid))
     for history_dict in nonaggregate_ancestry_records_by_lidvid.values():
-        yield AncestryRecord.from_dict(history_dict)
+        try:
+            yield AncestryRecord.from_dict(history_dict)
+        except ValueError as err:
+            log.error(err)
     del nonaggregate_ancestry_records_by_lidvid
     gc.collect()
 
@@ -317,3 +352,31 @@ def _get_nonaggregate_ancestry_records_with_chunking(
 
     if not using_cache_override:
         shutil.rmtree(on_disk_cache_dir)
+
+    # See race condition comment in function def
+    update_refs_document_metadata(client, touched_ref_documents)
+
+
+def update_refs_document_metadata(client: OpenSearch, docs: List[RefDocBookkeepingEntry]):
+    """
+    Write ancestry version metadata for all collection-page documents for which AncestryRecords were successfully
+    produced.
+    Subject to a race condition where this will be called when the final AncestryRecord is yielded, and therefore may
+    write metadata before the final page of AncestryRecords is written to the db (which may fail).  This is an
+    acceptably-small risk for now given that we can detect orphaned documents, but may need to be refactored later.
+    """
+
+    def generate_update(doc: RefDocBookkeepingEntry) -> Update:
+        return Update(
+            id=doc.id,
+            primary_term=doc.primary_term,
+            seq_no=doc.seq_no,
+            content={SWEEPERS_ANCESTRY_VERSION_METADATA_KEY: SWEEPERS_ANCESTRY_VERSION},
+        )
+
+    updates = map(generate_update, docs)
+    logging.info(
+        f"Updating {len(docs)} registry-refs docs with {SWEEPERS_ANCESTRY_VERSION_METADATA_KEY}={SWEEPERS_ANCESTRY_VERSION}"
+    )
+    write_updated_docs(client, updates, index_name="registry-refs", bulk_chunk_max_update_count=20000)
+    logging.info("registry-refs metadata update complete")

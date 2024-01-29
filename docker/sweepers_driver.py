@@ -103,7 +103,7 @@ def run_factory(sweeper_f: Callable) -> Callable:
     return functools.partial(
         sweeper_f,
         client=get_opensearch_client_from_environment(verify_certs=True if not dev_mode else False),
-        log_filepath='provenance.log',
+        log_filepath='registry-sweepers.log',
         log_level=log_level
     )
 
@@ -121,7 +121,6 @@ optional_sweepers = {
 
 args = parser.parse_args()
 
-
 # Define default sweepers to be run here, in order of execution
 sweepers = [
     repairkit.run,
@@ -136,10 +135,18 @@ for option, sweeper in optional_sweepers.items():
 sweeper_descriptions = [inspect.getmodule(f).__name__ for f in sweepers]
 log.info(f'Running sweepers: {sweeper_descriptions}')
 
-execution_begin = datetime.now()
+total_execution_begin = datetime.now()
+
+sweeper_execution_duration_strs = []
 
 for sweeper in sweepers:
+    sweeper_execution_begin = datetime.now()
     run_sweeper_f = run_factory(sweeper)
+
     run_sweeper_f()
 
-log.info(f'Sweepers successfully executed in {get_human_readable_elapsed_since(execution_begin)}')
+    sweeper_name = inspect.getmodule(sweeper).__name__
+    sweeper_execution_duration_strs.append(f'{sweeper_name}: {get_human_readable_elapsed_since(sweeper_execution_begin)}')
+
+log.info(f'Sweepers successfully executed in {get_human_readable_elapsed_since(total_execution_begin)}\n   '
+         + '\n   '.join(sweeper_execution_duration_strs))

@@ -8,6 +8,8 @@ from typing import Optional
 
 from opensearchpy import OpenSearch
 from pds.registrysweepers.ancestry.runtimeconstants import AncestryRuntimeConstants
+from pds.registrysweepers.ancestry.versioning import SWEEPERS_ANCESTRY_VERSION
+from pds.registrysweepers.ancestry.versioning import SWEEPERS_ANCESTRY_VERSION_METADATA_KEY
 from pds.registrysweepers.utils.db import query_registry_db_or_mock
 
 log = logging.getLogger(__name__)
@@ -35,9 +37,9 @@ def product_class_query_factory(cls: ProductClass) -> Dict:
 
 def get_bundle_ancestry_records_query(client: OpenSearch, db_mock: DbMockTypeDef = None) -> Iterable[Dict]:
     query = product_class_query_factory(ProductClass.BUNDLE)
-    _source = {"includes": ["lidvid"]}
+    _source = {"includes": ["lidvid", SWEEPERS_ANCESTRY_VERSION_METADATA_KEY]}
     query_f = query_registry_db_or_mock(db_mock, "get_bundle_ancestry_records", use_search_after=True)
-    docs = query_f(client, query, _source)
+    docs = query_f(client, "registry", query, _source)
 
     return docs
 
@@ -46,7 +48,7 @@ def get_collection_ancestry_records_bundles_query(client: OpenSearch, db_mock: D
     query = product_class_query_factory(ProductClass.BUNDLE)
     _source = {"includes": ["lidvid", "ref_lid_collection"]}
     query_f = query_registry_db_or_mock(db_mock, "get_collection_ancestry_records_bundles", use_search_after=True)
-    docs = query_f(client, query, _source)
+    docs = query_f(client, "registry", query, _source)
 
     return docs
 
@@ -56,28 +58,57 @@ def get_collection_ancestry_records_collections_query(
 ) -> Iterable[Dict]:
     # Query the registry for all collection identifiers
     query = product_class_query_factory(ProductClass.COLLECTION)
-    _source = {"includes": ["lidvid", "alternate_ids"]}
+    _source = {"includes": ["lidvid", "alternate_ids", SWEEPERS_ANCESTRY_VERSION_METADATA_KEY]}
     query_f = query_registry_db_or_mock(db_mock, "get_collection_ancestry_records_collections", use_search_after=True)
-    docs = query_f(client, query, _source)
+    docs = query_f(client, "registry", query, _source)
 
     return docs
 
 
 def get_nonaggregate_ancestry_records_query(client: OpenSearch, registry_db_mock: DbMockTypeDef) -> Iterable[Dict]:
     # Query the registry-refs index for the contents of all collections
-    query: Dict = {"query": {"match_all": {}}}
+    query: Dict = {
+        "query": {
+            "bool": {
+                "must_not": [{"range": {SWEEPERS_ANCESTRY_VERSION_METADATA_KEY: {"gte": SWEEPERS_ANCESTRY_VERSION}}}]
+            }
+        },
+        "seq_no_primary_term": True,
+    }
     _source = {"includes": ["collection_lidvid", "batch_id", "product_lidvid"]}
     query_f = query_registry_db_or_mock(registry_db_mock, "get_nonaggregate_ancestry_records", use_search_after=True)
 
     # each document will have many product lidvids, so a smaller page size is warranted here
     docs = query_f(
         client,
+        "registry-refs",
         query,
         _source,
-        index_name="registry-refs",
         page_size=AncestryRuntimeConstants.nonaggregate_ancestry_records_query_page_size,
         request_timeout_seconds=30,
         sort_fields=["collection_lidvid", "batch_id"],
     )
+
+    return docs
+
+
+def get_orphaned_documents(client: OpenSearch, registry_db_mock: DbMockTypeDef, index_name: str) -> Iterable[Dict]:
+    # Query an index documents without an up-to-date ancestry version reference - this would indicate a product which is
+    # orphaned and is getting missed in processing
+    query: Dict = {
+        "query": {
+            "bool": {
+                "must_not": [{"range": {SWEEPERS_ANCESTRY_VERSION_METADATA_KEY: {"gte": SWEEPERS_ANCESTRY_VERSION}}}]
+            }
+        }
+    }
+    _source: Dict = {"includes": []}
+    query_f = query_registry_db_or_mock(registry_db_mock, "get_orphaned_ancestry_docs", use_search_after=True)
+
+    sort_fields_override = (
+        ["collection_lidvid", "batch_id"] if index_name == "registry-refs" else None
+    )  # use default for registry
+
+    docs = query_f(client, index_name, query, _source, sort_fields=sort_fields_override)
 
     return docs

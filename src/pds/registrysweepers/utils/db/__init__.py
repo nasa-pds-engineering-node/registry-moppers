@@ -2,6 +2,7 @@ import json
 import logging
 import math
 import sys
+from typing import Any
 from typing import Callable
 from typing import Dict
 from typing import Iterable
@@ -21,9 +22,9 @@ log = logging.getLogger(__name__)
 
 def query_registry_db(
     client: OpenSearch,
+    index_name: str,
     query: Dict,
     _source: Dict,
-    index_name: str = "registry",
     page_size: int = 10000,
     scroll_keepalive_minutes: int = 10,
     request_timeout_seconds: int = 20,
@@ -118,9 +119,9 @@ def query_registry_db(
 
 def query_registry_db_with_search_after(
     client: OpenSearch,
+    index_name: str,
     query: Dict,
     _source: Dict,
-    index_name: str = "registry",
     page_size: int = 10000,
     sort_fields: Union[List[str], None] = None,
     request_timeout_seconds: int = 20,
@@ -213,15 +214,17 @@ def query_registry_db_with_search_after(
 
 
 def query_registry_db_or_mock(
-    mock_f: Optional[Callable[[str], Iterable[Dict]]], mock_query_id: str, use_search_after: bool = False
+    mock_f: Optional[Callable[[str], Iterable[Dict]]],
+    mock_query_id: str,
+    use_search_after: bool = False,
 ):
     if mock_f is not None:
 
         def mock_wrapper(
             client: OpenSearch,
+            index_name: str,
             query: Dict,
             _source: Dict,
-            index_name: str = "registry",
             page_size: int = 10000,
             scroll_validity_duration_minutes: int = 10,
             request_timeout_seconds: int = 20,
@@ -239,7 +242,7 @@ def query_registry_db_or_mock(
 def write_updated_docs(
     client: OpenSearch,
     updates: Iterable[Update],
-    index_name: str = "registry",
+    index_name: str,
     bulk_chunk_max_update_count: Union[int, None] = None,
 ):
     log.info("Updating a lazily-generated collection of product documents...")
@@ -284,7 +287,12 @@ def write_updated_docs(
 
 def update_as_statements(update: Update) -> Iterable[str]:
     """Given an Update, convert it to an ElasticSearch-style set of request body content strings"""
-    update_objs = [{"update": {"_id": update.id}}, {"doc": update.content}]
+    metadata_statement: Dict[str, Any] = {"update": {"_id": update.id}}
+    if update.has_versioning_information():
+        metadata_statement["if_primary_term"] = update.primary_term
+        metadata_statement["if_seq_no"] = update.seq_no
+    content_statement = {"doc": update.content}
+    update_objs = [metadata_statement, content_statement]
     updates_strs = [json.dumps(obj) for obj in update_objs]
     return updates_strs
 
@@ -366,6 +374,6 @@ def get_extant_lidvids(client: OpenSearch) -> Iterable[str]:
     }
     _source = {"includes": ["lidvid"]}
 
-    results = query_registry_db(client, query, _source, scroll_keepalive_minutes=1)
+    results = query_registry_db(client, "registry", query, _source, scroll_keepalive_minutes=1)
 
     return map(lambda doc: doc["_source"]["lidvid"], results)
