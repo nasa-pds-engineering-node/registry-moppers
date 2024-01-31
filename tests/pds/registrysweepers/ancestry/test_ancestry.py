@@ -17,7 +17,9 @@ from tests.mocks.registryquerymock import RegistryQueryMock
 
 
 class AncestryBasicTestCase(unittest.TestCase):
-    input_file_path = os.path.abspath("./tests/pds/registrysweepers/test_ancestry_mock_AncestryFunctionalTestCase.json")
+    input_file_path = os.path.abspath(
+        "./tests/pds/registrysweepers/ancestry/resources/test_ancestry_mock_AncestryFunctionalTestCase.json"
+    )
     registry_query_mock = RegistryQueryMock(input_file_path)
 
     ancestry_records: List[AncestryRecord] = []
@@ -140,7 +142,7 @@ class AncestryBasicTestCase(unittest.TestCase):
 
 class AncestryAlternateIdsTestCase(unittest.TestCase):
     input_file_path = os.path.abspath(
-        "./tests/pds/registrysweepers/test_ancestry_mock_AncestryAlternateIdsTestCase.json"
+        "./tests/pds/registrysweepers/ancestry/resources/test_ancestry_mock_AncestryAlternateIdsTestCase.json"
     )
     registry_query_mock = RegistryQueryMock(input_file_path)
 
@@ -250,7 +252,7 @@ class AncestryAlternateIdsTestCase(unittest.TestCase):
 
 class AncestryMalformedDocsTestCase(unittest.TestCase):
     input_file_path = os.path.abspath(
-        "./tests/pds/registrysweepers/test_ancestry_mock_AncestryMalformedDocsTestCase.json"
+        "./tests/pds/registrysweepers/ancestry/resources/test_ancestry_mock_AncestryMalformedDocsTestCase.json"
     )
     registry_query_mock = RegistryQueryMock(input_file_path)
 
@@ -283,7 +285,7 @@ class AncestryMalformedDocsTestCase(unittest.TestCase):
 
 class AncestryLegacyTypesTestCase(unittest.TestCase):
     input_file_path = os.path.abspath(
-        "./tests/pds/registrysweepers/test_ancestry_mock_AncestryLegacyTypesTestCase.json"
+        "./tests/pds/registrysweepers/ancestry/resources/test_ancestry_mock_AncestryLegacyTypesTestCase.json"
     )
     registry_query_mock = RegistryQueryMock(input_file_path)
 
@@ -305,7 +307,7 @@ class AncestryLegacyTypesTestCase(unittest.TestCase):
 
 class AncestryMemoryOptimizedTestCase(unittest.TestCase):
     input_file_path = os.path.abspath(
-        "./tests/pds/registrysweepers/test_ancestry_mock_AncestryMemoryOptimizedTestCase.json"
+        "./tests/pds/registrysweepers/ancestry/resources/test_ancestry_mock_AncestryMemoryOptimizedTestCase.json"
     )
     registry_query_mock = RegistryQueryMock(input_file_path)
 
