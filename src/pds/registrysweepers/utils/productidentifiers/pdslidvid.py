@@ -34,6 +34,9 @@ class PdsLidVid(PdsProductIdentifier):
         return f"PdsLidVid({str(self)})"
 
     def __eq__(self, other):
+        if not isinstance(other, PdsLidVid):
+            return False
+
         return self.lid == other.lid and self.vid == other.vid
 
     def __lt__(self, other: PdsLidVid):
