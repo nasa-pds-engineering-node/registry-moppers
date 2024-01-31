@@ -1,6 +1,6 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2024-01-29)
+## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2024-01-31)
 
 [Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/v1.2.1...«unknown»)
 
@@ -11,6 +11,10 @@
 **Improvements:**
 
 - Investigate/implement non-redundant provenance processing [\#92](https://github.com/NASA-PDS/registry-sweepers/issues/92)
+
+**Other closed issues:**
+
+- Implement functional tests for provenance.py [\#13](https://github.com/NASA-PDS/registry-sweepers/issues/13)
 
 ## [v1.2.1](https://github.com/NASA-PDS/registry-sweepers/tree/v1.2.1) (2024-01-24)
 
