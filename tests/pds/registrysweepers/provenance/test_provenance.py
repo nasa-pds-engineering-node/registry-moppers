@@ -30,10 +30,13 @@ class ProvenanceBasicFunctionalTestCase(unittest.TestCase):
         expected_provenance = {
             "urn:nasa:pds:bundle::1.0": "urn:nasa:pds:bundle::1.1",
             "urn:nasa:pds:bundle::1.1": "urn:nasa:pds:bundle::2.0",
+            "urn:nasa:pds:bundle::2.0": None,
             "urn:nasa:pds:bundle:collection::10.0": "urn:nasa:pds:bundle:collection::10.1",
             "urn:nasa:pds:bundle:collection::10.1": "urn:nasa:pds:bundle:collection::20.0",
+            "urn:nasa:pds:bundle:collection::20.0": None,
             "urn:nasa:pds:bundle:collection:product::100.0": "urn:nasa:pds:bundle:collection:product::100.1",
             "urn:nasa:pds:bundle:collection:product::100.1": "urn:nasa:pds:bundle:collection:product::200.0",
+            "urn:nasa:pds:bundle:collection:product::200.0": None,
         }
 
         def crude_update_hash(update: Update) -> str:
@@ -46,9 +49,6 @@ class ProvenanceBasicFunctionalTestCase(unittest.TestCase):
             provenance.link_records_in_chain(record_chain)
 
         updates = provenance.generate_updates(itertools.chain(*record_chains))
-        # previously, updates were not generated for latest products, so we need to exclude those from comparison for
-        # consistency
-        legacy_updates = [u for u in updates if u.content["ops:Provenance/ops:superseded_by"] is not None]
         expected_updates = [
             Update(
                 id=k,
@@ -61,7 +61,7 @@ class ProvenanceBasicFunctionalTestCase(unittest.TestCase):
         ]
 
         self.assertSetEqual(
-            set(crude_update_hash(u) for u in expected_updates), set(crude_update_hash(u) for u in legacy_updates)
+            set(crude_update_hash(u) for u in expected_updates), set(crude_update_hash(u) for u in updates)
         )
 
 
