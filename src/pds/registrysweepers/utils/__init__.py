@@ -4,7 +4,7 @@ from argparse import Namespace
 from typing import List
 from typing import Union
 
-from pds.registrysweepers.utils.db import query_registry_db
+from pds.registrysweepers.utils.db import query_registry_db_with_scroll
 
 log = logging.getLogger(__name__)
 

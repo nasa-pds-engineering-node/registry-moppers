@@ -20,7 +20,7 @@ from retry.api import retry_call
 log = logging.getLogger(__name__)
 
 
-def query_registry_db(
+def query_registry_db_with_scroll(
     client: OpenSearch,
     index_name: str,
     query: Dict,
@@ -216,7 +216,7 @@ def query_registry_db_with_search_after(
 def query_registry_db_or_mock(
     mock_f: Optional[Callable[[str], Iterable[Dict]]],
     mock_query_id: str,
-    use_search_after: bool = False,
+    use_search_after: bool = True,
 ):
     if mock_f is not None:
 
@@ -236,7 +236,7 @@ def query_registry_db_or_mock(
     elif use_search_after:
         return query_registry_db_with_search_after
     else:
-        return query_registry_db
+        return query_registry_db_with_scroll
 
 
 def write_updated_docs(
