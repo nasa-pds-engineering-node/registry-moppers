@@ -362,23 +362,6 @@ def aggregate_update_error_types(items: Iterable[Dict]) -> Mapping[str, Dict[str
     return agg
 
 
-def get_extant_lidvids(client: OpenSearch) -> Iterable[str]:
-    """
-    Given an OpenSearch host, return all extant LIDVIDs
-    """
-
-    log.info("Retrieving extant LIDVIDs")
-
-    query = {
-        "query": {"bool": {"must": [{"terms": {"ops:Tracking_Meta/ops:archive_status": ["archived", "certified"]}}]}}
-    }
-    _source = {"includes": ["lidvid"]}
-
-    results = query_registry_db(client, "registry", query, _source, scroll_keepalive_minutes=1)
-
-    return map(lambda doc: doc["_source"]["lidvid"], results)
-
-
 @retry(tries=6, delay=15, backoff=2, logger=log)
 def get_query_hits_count(client: OpenSearch, index_name: str, query: Dict) -> int:
     response = client.search(index=index_name, body=query, size=0, _source_includes=[], track_total_hits=True)
