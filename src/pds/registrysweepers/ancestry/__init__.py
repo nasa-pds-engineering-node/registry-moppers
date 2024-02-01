@@ -15,6 +15,7 @@ from pds.registrysweepers.ancestry.generation import get_bundle_ancestry_records
 from pds.registrysweepers.ancestry.generation import get_collection_ancestry_records
 from pds.registrysweepers.ancestry.generation import get_nonaggregate_ancestry_records
 from pds.registrysweepers.ancestry.queries import get_orphaned_documents
+from pds.registrysweepers.ancestry.queries import get_orphaned_documents_count
 from pds.registrysweepers.ancestry.versioning import SWEEPERS_ANCESTRY_VERSION
 from pds.registrysweepers.ancestry.versioning import SWEEPERS_ANCESTRY_VERSION_METADATA_KEY
 from pds.registrysweepers.utils import configure_logging
@@ -81,12 +82,28 @@ def run(
 
     log.info("Checking indexes for orphaned documents")
     for index_name in ["registry", "registry-refs"]:
-        orphaned_docs = get_orphaned_documents(client, registry_mock_query_f, index_name)
-        orphaned_doc_ids = [doc.get("_id") for doc in orphaned_docs]
-        orphaned_doc_count = len(orphaned_doc_ids)
+        if log.isEnabledFor(logging.DEBUG):
+            orphaned_docs = get_orphaned_documents(client, registry_mock_query_f, index_name)
+            orphaned_doc_ids = [doc.get("_id") for doc in orphaned_docs]
+            orphaned_doc_ids_str = str(orphaned_doc_ids)
+            orphaned_doc_count = len(orphaned_doc_ids)
+        else:
+            orphaned_doc_ids_str = "<run with debug logging enabled to view list of orphaned lidvids>"
+
+            # Currently, mocks are only implemented for iterating over document collections, not accessing the
+            # enclosing query response metadata.  This is a shortcoming which should be addressed, but in the meantime
+            # this bandaid will allow functional tests to complete when a client is not provided, i.e. during functional
+            # testing.
+            # TODO: refactor mock framework to provide access to arbitrary queries, not just the hits themselves
+            def orphan_counter_mock(_, __):
+                return -1
+
+            orphan_counter_f = get_orphaned_documents_count if client is not None else orphan_counter_mock
+            orphaned_doc_count = orphan_counter_f(client, index_name)
+
         if orphaned_doc_count > 0:
             log.error(
-                f'Detected {orphaned_doc_count} orphaned documents in index "{index_name} - please inform developers": {orphaned_doc_ids}'
+                f'Detected {orphaned_doc_count} orphaned documents in index "{index_name} - please inform developers": {orphaned_doc_ids_str}'
             )
 
     log.info("Ancestry sweeper processing complete!")

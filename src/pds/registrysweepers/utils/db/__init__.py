@@ -377,3 +377,10 @@ def get_extant_lidvids(client: OpenSearch) -> Iterable[str]:
     results = query_registry_db(client, "registry", query, _source, scroll_keepalive_minutes=1)
 
     return map(lambda doc: doc["_source"]["lidvid"], results)
+
+
+@retry(tries=6, delay=15, backoff=2, logger=log)
+def get_query_hits_count(client: OpenSearch, index_name: str, query: Dict) -> int:
+    response = client.search(index=index_name, body=query, size=0, _source_includes=[], track_total_hits=True)
+
+    return response["hits"]["total"]["value"]
