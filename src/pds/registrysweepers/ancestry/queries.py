@@ -10,6 +10,7 @@ from opensearchpy import OpenSearch
 from pds.registrysweepers.ancestry.runtimeconstants import AncestryRuntimeConstants
 from pds.registrysweepers.ancestry.versioning import SWEEPERS_ANCESTRY_VERSION
 from pds.registrysweepers.ancestry.versioning import SWEEPERS_ANCESTRY_VERSION_METADATA_KEY
+from pds.registrysweepers.utils.db import get_query_hits_count
 from pds.registrysweepers.utils.db import query_registry_db_or_mock
 
 log = logging.getLogger(__name__)
@@ -92,16 +93,16 @@ def get_nonaggregate_ancestry_records_query(client: OpenSearch, registry_db_mock
     return docs
 
 
-def get_orphaned_documents(client: OpenSearch, registry_db_mock: DbMockTypeDef, index_name: str) -> Iterable[Dict]:
-    # Query an index documents without an up-to-date ancestry version reference - this would indicate a product which is
-    # orphaned and is getting missed in processing
-    query: Dict = {
-        "query": {
-            "bool": {
-                "must_not": [{"range": {SWEEPERS_ANCESTRY_VERSION_METADATA_KEY: {"gte": SWEEPERS_ANCESTRY_VERSION}}}]
-            }
-        }
+_orphaned_docs_query = {
+    "query": {
+        "bool": {"must_not": [{"range": {SWEEPERS_ANCESTRY_VERSION_METADATA_KEY: {"gte": SWEEPERS_ANCESTRY_VERSION}}}]}
     }
+}
+
+
+def get_orphaned_documents(client: OpenSearch, registry_db_mock: DbMockTypeDef, index_name: str) -> Iterable[Dict]:
+    # Query an index for documents without an up-to-date ancestry version reference - this would indicate a product
+    # which is orphaned and is getting missed in processing
     _source: Dict = {"includes": []}
     query_f = query_registry_db_or_mock(registry_db_mock, "get_orphaned_ancestry_docs", use_search_after=True)
 
@@ -109,6 +110,12 @@ def get_orphaned_documents(client: OpenSearch, registry_db_mock: DbMockTypeDef, 
         ["collection_lidvid", "batch_id"] if index_name == "registry-refs" else None
     )  # use default for registry
 
-    docs = query_f(client, index_name, query, _source, sort_fields=sort_fields_override)
+    docs = query_f(client, index_name, _orphaned_docs_query, _source, sort_fields=sort_fields_override)
 
     return docs
+
+
+def get_orphaned_documents_count(client: OpenSearch, index_name: str) -> int:
+    # Query an index documents without an up-to-date ancestry version reference - this would indicate a product which is
+    # orphaned and is getting missed in processing
+    return get_query_hits_count(client, index_name, _orphaned_docs_query)
