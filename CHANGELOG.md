@@ -1,6 +1,6 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2024-02-01)
+## [«unknown»](https://github.com/NASA-PDS/registry-sweepers/tree/«unknown») (2024-02-02)
 
 [Full Changelog](https://github.com/NASA-PDS/registry-sweepers/compare/v1.2.1...«unknown»)
 
@@ -14,7 +14,9 @@
 
 **Other closed issues:**
 
+- Add node information to select log messages [\#18](https://github.com/NASA-PDS/registry-sweepers/issues/18)
 - Implement functional tests for provenance.py [\#13](https://github.com/NASA-PDS/registry-sweepers/issues/13)
+- Switch utils from raw requests calls to opensearch-py [\#12](https://github.com/NASA-PDS/registry-sweepers/issues/12)
 
 ## [v1.2.1](https://github.com/NASA-PDS/registry-sweepers/tree/v1.2.1) (2024-01-24)
 
