@@ -330,7 +330,7 @@ def _get_nonaggregate_ancestry_records_with_chunking(
         try:
             yield AncestryRecord.from_dict(history_dict)
         except ValueError as err:
-            log.error(err)
+            log.warning(err)
     del nonaggregate_ancestry_records_by_lidvid
     gc.collect()
 

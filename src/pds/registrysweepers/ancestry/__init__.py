@@ -102,7 +102,7 @@ def run(
             orphaned_doc_count = orphan_counter_f(client, index_name)
 
         if orphaned_doc_count > 0:
-            log.error(
+            log.warning(
                 f'Detected {orphaned_doc_count} orphaned documents in index "{index_name} - please inform developers": {orphaned_doc_ids_str}'
             )
 
