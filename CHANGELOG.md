@@ -1,8 +1,8 @@
 # Changelog
 
-## [release/1.2.0](https://github.com/nasa-pds-engineering-node/registry-moppers/tree/release/1.2.0) (2024-03-18)
+## [v1.2.0](https://github.com/nasa-pds-engineering-node/registry-moppers/tree/v1.2.0) (2024-03-18)
 
-[Full Changelog](https://github.com/nasa-pds-engineering-node/registry-moppers/compare/v1.0.0...release/1.2.0)
+[Full Changelog](https://github.com/nasa-pds-engineering-node/registry-moppers/compare/v1.0.0...v1.2.0)
 
 ## [v1.0.0](https://github.com/nasa-pds-engineering-node/registry-moppers/tree/v1.0.0) (2024-03-18)
 
