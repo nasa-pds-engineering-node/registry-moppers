@@ -62,11 +62,6 @@ jobs:
                     key: pds-${{runner.os}}-py-${{hashFiles('**/*.whl')}}
                     # To restore a set of files, we only need to match a prefix of the saved key.
                     restore-keys: pds-${{runner.os}}-py-
-            -   name: 🫙 Docker Image Tag Determination
-                id: docker_tag_determination
-                run: |
-                    echo "::set-output name=image_tag::$(cat ./src/pds/registrysweepers/VERSION.txt)"
-                    echo YO YO YO version is $(cat ./src/pds/registrysweepers/VERSION.txt)
             -   name: 💳 Docker Hub Identification
                 uses: docker/login-action@v2
                 with:
@@ -84,8 +79,11 @@ jobs:
                     pypi_username: ${{secrets.PYPI_USERNAME}}
                     pypi_password: ${{secrets.PYPI_PASSWORD}}
                     ADMIN_GITHUB_TOKEN: ${{secrets.ADMIN_GITHUB_TOKEN}}
-            -   name: ❓ WTF
-                run: echo YO YO YO post-round the version is $(cat ./src/pds/registrysweepers/VERSION.txt)
+            -   name: 🫙 Docker Image Tag Determination
+                id: docker_tag_determination
+                run: |
+                    echo "::set-output name=image_tag::$(cat ./src/pds/registrysweepers/VERSION.txt)"
+                    echo YO YO YO version is $(cat ./src/pds/registrysweepers/VERSION.txt)
             -   name: 🧱 Image Construction and Publication
                 uses: docker/build-push-action@v3
                 with:
