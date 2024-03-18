@@ -89,7 +89,7 @@ jobs:
                     file: ./docker/Dockerfile
                     platforms: linux/amd64,linux/arm64
                     push: true
-                    tags: ${{secrets.DOCKERHUB_USERNAME}}/registry-sweepers:${{steps.docker_tag_determination.outputs.image_tag}}
+                    tags: ${{secrets.DOCKERHUB_USERNAME}}/registry-moppers:${{steps.docker_tag_determination.outputs.image_tag}}
 
 ...
 

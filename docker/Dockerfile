@@ -42,7 +42,7 @@
 # We use a slim python-enabled base image.
 FROM python:3.9-slim-bullseye
 
-ENV INSTALL_WORKDIR=/tmp/registry-sweepers
+ENV INSTALL_WORKDIR=/tmp/registry-moppers
 
 COPY . $INSTALL_WORKDIR
 
