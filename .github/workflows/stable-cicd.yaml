@@ -47,13 +47,13 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             -   name: 💳 Checkout
-                uses: actions/checkout@v3
+                uses: actions/checkout@v4
                 with:
                     lfs: true
                     token: ${{secrets.ADMIN_GITHUB_TOKEN}}
                     fetch-depth: 0
             -   name: 💵 Python Cache
-                uses: actions/cache@v3
+                uses: actions/cache@v4
                 with:
                     path: ~/.cache/pip
                     # The "key" used to indicate a set of cached files is the operating system runner
@@ -63,14 +63,14 @@ jobs:
                     # To restore a set of files, we only need to match a prefix of the saved key.
                     restore-keys: pds-${{runner.os}}-py-
             -   name: 💳 Docker Hub Identification
-                uses: docker/login-action@v2
+                uses: docker/login-action@v3
                 with:
                     username: ${{secrets.DOCKERHUB_USERNAME}}
                     password: ${{secrets.DOCKERHUB_TOKEN}}
             -   name: 🎰 QEMU Multiple Machine Emulation
-                uses: docker/setup-qemu-action@v2
+                uses: docker/setup-qemu-action@v3
             -   name: 🚢 Docker Buildx
-                uses: docker/setup-buildx-action@v2
+                uses: docker/setup-buildx-action@v3
             -   name: 🤠 Roundup
                 uses: NASA-PDS/roundup-action@stable
                 with:
@@ -90,10 +90,9 @@ jobs:
                     minor="${parts[1]}"
                     ((minor--))
                     docker_version="${parts[0]}.${minor}.${parts[2]}"
-                    echo "::set-output name=image_tag::$docker_version"
-                    echo YO YO YO docker version is $docker_version
+                    echo "image_tag=${docker_version}" >> $GITHUB_OUTPUT
             -   name: 🧱 Image Construction and Publication
-                uses: docker/build-push-action@v3
+                uses: docker/build-push-action@v5
                 with:
                     context: ./
                     file: ./docker/Dockerfile
