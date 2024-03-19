@@ -79,11 +79,19 @@ jobs:
                     pypi_username: ${{secrets.PYPI_USERNAME}}
                     pypi_password: ${{secrets.PYPI_PASSWORD}}
                     ADMIN_GITHUB_TOKEN: ${{secrets.ADMIN_GITHUB_TOKEN}}
+            # At this point, the Roundup as published release/X.Y.Z to GitHub and PyPI and advanced
+            # the VERSION.txt file to X.Y+1.Z, so for Docker we need to decrement the minor version
+            # number by 1.
             -   name: 🫙 Docker Image Tag Determination
                 id: docker_tag_determination
                 run: |
-                    echo "::set-output name=image_tag::$(cat ./src/pds/registrysweepers/VERSION.txt)"
-                    echo YO YO YO version is $(cat ./src/pds/registrysweepers/VERSION.txt)
+                    roundup_version=$(cat ./src/pds/registrysweepers/VERSION.txt)
+                    IFS='.' read -ra parts <<< "$roundup_version"
+                    minor="${parts[1]}"
+                    ((minor--))
+                    docker_version="${parts[0]}.${minor}.${parts[2]}"
+                    echo "::set-output name=image_tag::$docker_version"
+                    echo YO YO YO docker version is $docker_version
             -   name: 🧱 Image Construction and Publication
                 uses: docker/build-push-action@v3
                 with:
