@@ -52,6 +52,10 @@ jobs:
                     lfs: true
                     token: ${{secrets.ADMIN_GITHUB_TOKEN}}
                     fetch-depth: 0
+            -   name: 💥 DOOM
+                run: |
+                    echo GitHub Ref name = ${{github.ref_name}}
+                    exit -1
             -   name: 💵 Python Cache
                 uses: actions/cache@v4
                 with:
