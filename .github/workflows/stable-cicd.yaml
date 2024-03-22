@@ -82,7 +82,8 @@ jobs:
             -   name: 🫙 Docker Image Tag Determination
                 id: docker_tag_determination
                 run: |
-                    echo "image_tag=${${{github.ref_name}}#release/}" >> $GITHUB_OUTPUT
+                    ref=${{github.ref_name}}
+                    echo "image_tag=${ref#release/}" >> $GITHUB_OUTPUT
             -   name: 🧱 Image Construction and Publication
                 uses: docker/build-push-action@v5
                 with:
